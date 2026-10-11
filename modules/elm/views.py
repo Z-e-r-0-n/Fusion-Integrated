@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from .models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy
 from .serializers import LeaveRequestSerializer, LeaveBalanceSerializer, LeaveTypeSerializer, LeavePolicySerializer
-from fusion.iam import RoleAccess
+from fusion_auth.permissions import HasModuleGrant, HasPermission, IsAuthenticatedPrincipal
 from rest_framework import status
 from datetime import timedelta
 import calendar
@@ -22,10 +22,10 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         Apply role-based access controls.
         """
         if self.action == 'create':
-            return [permissions.IsAuthenticated(), RoleAccess.Permission('approve_leave_request')]
+            return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_requests.approve")()]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            return [permissions.IsAuthenticated(), RoleAccess.Permission('approve_leave_request')]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_requests.approve")()]
+        return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_requests.view")()]
 
     def create(self, request, *args, **kwargs):
         """
@@ -40,7 +40,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         """
         Set created_at timestamp and associate with employee.
         """
-        serializer.save(employee=self.request.user.employee)
+        serializer.save(employee=self.request.principal.user_id)
 
     def update(self, request, *args, **kwargs):
         """
@@ -64,8 +64,8 @@ class LeaveBalanceViewSet(viewsets.ModelViewSet):
         Apply role-based access controls.
         """
         if self.action in ['update', 'partial_update']:
-            return [permissions.IsAuthenticated(), RoleAccess.Permission('update_leave_balance')]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_balances.manage")()]
+        return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_balances.view")()]
 
     def perform_update(self, serializer):
         """
@@ -84,7 +84,7 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     """
     queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
-    permission_classes = [permissions.IsAdminUser, RoleAccess.Permission('edit_leave_policy')]
+    permission_classes = [IsAuthenticatedPrincipal, HasModuleGrant("elm"), HasPermission("elm.leave_types.view"), HasPermission("elm.leave_policies.manage")]
 
 
 class LeavePolicyViewSet(viewsets.ModelViewSet):
@@ -93,7 +93,7 @@ class LeavePolicyViewSet(viewsets.ModelViewSet):
     """
     queryset = LeavePolicy.objects.all()
     serializer_class = LeavePolicySerializer
-    permission_classes = [permissions.IsAdminUser, RoleAccess.Permission('edit_leave_policy')]
+    permission_classes = [IsAuthenticatedPrincipal, HasModuleGrant("elm"), HasPermission("elm.leave_policies.view"), HasPermission("elm.leave_policies.manage")]
 
     def get_queryset(self):
         """

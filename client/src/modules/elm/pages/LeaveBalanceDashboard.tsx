@@ -1,6 +1,6 @@
 // Leave Balance Dashboard
-import { Table, Thead, Tbody, Tr, Th, Td, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
-import { useLeaveBalances } from '../../api/hooks';
+import { Table, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
+import { useLeaveBalances } from '../api/hooks';
 import { useNavigate } from 'react-router-dom';
 
 export default function LeaveBalanceDashboard() {
@@ -9,7 +9,7 @@ export default function LeaveBalanceDashboard() {
 
   if (isLoading) return (
     <Paper p="md">
-      <LoadingOverlay visible={true} overlayOpacity={0.1}>
+      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
         <Title order={3}>Leave Balance</Title>
         <Text>Loading balances...</Text>
       </LoadingOverlay>
@@ -27,23 +27,23 @@ export default function LeaveBalanceDashboard() {
     <Paper p="md">
       <Title order={3}>Leave Balance</Title>
       <Table>
-        <Thead>
-          <Tr>
-            <Th>Employee</Th>
-            <Th>Annual Balance</Th>
-            <Th>Used</Th>
-            <Th>Remaining</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {data.map((balance) => (
-            <Tr key={balance.id}>
-              <Td>{balance.employee.name}</Td>
-              <Td>{balance.annual_balance}</Td>
-              <Td>{balance.used}</Td>
-              <Td>{balance.remaining}</Td>
-              <Td>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Employee</Table.Th>
+            <Table.Th>Annual Balance</Table.Th>
+            <Table.Th>Used</Table.Th>
+            <Table.Th>Remaining</Table.Th>
+            <Table.Th>Actions</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {data.map((balance: Record<string, any>) => (
+            <Table.Tr key={balance.id}>
+              <Table.Td>{balance.employee.name}</Table.Td>
+              <Table.Td>{balance.annual_balance}</Table.Td>
+              <Table.Td>{balance.used}</Table.Td>
+              <Table.Td>{balance.remaining}</Table.Td>
+              <Table.Td>
                 <Stack>
                   <Button
                     variant="default"
@@ -52,10 +52,10 @@ export default function LeaveBalanceDashboard() {
                     View
                   </Button>
                 </Stack>
-              </Td>
-            </Tr>
+              </Table.Td>
+            </Table.Tr>
           ))}
-        </Tbody>
+        </Table.Tbody>
       </Table>
     </Paper>
   );

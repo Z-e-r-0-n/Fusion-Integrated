@@ -16,5 +16,5 @@ router.register(r'requests', LeaveRequestViewSet)
 router.register(r'policies', LeavePolicyViewSet)
 
 urlpatterns = [
-    path('v1/', include(router.urls)),
+    path('', include(router.urls)),
 ]

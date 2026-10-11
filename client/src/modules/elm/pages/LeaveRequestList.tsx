@@ -1,6 +1,6 @@
 // Leave Request List
-import { Table, Thead, Tbody, Tr, Th, Td, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
-import { useLeaveRequests, useApproveLeave } from '../../api/hooks';
+import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
+import { useLeaveRequests, useApproveLeave } from '../api/hooks';
 import { useNavigate } from 'react-router-dom';
 
 export default function LeaveRequestList() {
@@ -10,7 +10,7 @@ export default function LeaveRequestList() {
 
   if (isLoading) return (
     <Paper p="md">
-      <LoadingOverlay visible={true} overlayOpacity={0.1}>
+      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
         <Title order={3}>Leave Requests</Title>
         <Text>Loading requests...</Text>
       </LoadingOverlay>
@@ -28,27 +28,27 @@ export default function LeaveRequestList() {
     <Paper p="md">
       <Title order={3}>Leave Requests</Title>
       <Table>
-        <Thead>
-          <Tr>
-            <Th>ID</Th>
-            <Th>Employee</Th>
-            <Th>Start Date</Th>
-            <Th>Status</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {data.map((request) => (
-            <Tr key={request.id}>
-              <Td>{request.id}</Td>
-              <Td>{request.employee.name}</Td>
-              <Td>{request.start_date}</Td>
-              <Td>
-                <StatusBadge color={request.status === 'APPROVED' ? 'green' : 'yellow'}>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>ID</Table.Th>
+            <Table.Th>Employee</Table.Th>
+            <Table.Th>Start Date</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th>Actions</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {data.map((request: Record<string, any>) => (
+            <Table.Tr key={request.id}>
+              <Table.Td>{request.id}</Table.Td>
+              <Table.Td>{request.employee.name}</Table.Td>
+              <Table.Td>{request.start_date}</Table.Td>
+              <Table.Td>
+                <Badge color={request.status === 'APPROVED' ? 'green' : 'yellow'}>
                   {request.status}
-                </StatusBadge>
-              </Td>
-              <Td>
+                </Badge>
+              </Table.Td>
+              <Table.Td>
                 <Stack>
                   <Button
                     variant="default"
@@ -73,10 +73,10 @@ export default function LeaveRequestList() {
                     </Button>
                   )}
                 </Stack>
-              </Td>
-            </Tr>
+              </Table.Td>
+            </Table.Tr>
           ))}
-        </Tbody>
+        </Table.Tbody>
       </Table>
     </Paper>
   );

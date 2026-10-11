@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy
-from fusion.iam import RoleAccess
 
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
@@ -30,9 +29,3 @@ class LeavePolicySerializer(serializers.ModelSerializer):
         model = LeavePolicy
         fields = ['id', 'type', 'max_days', 'carry_forward', 'requires_substitute', 'holiday_calendar']
         read_only_fields = ['id']
-
-# Register serializers with RoleAccess
-RoleAccess.register_serializer(LeaveRequest, LeaveRequestSerializer)
-RoleAccess.register_serializer(LeaveBalance, LeaveBalanceSerializer)
-RoleAccess.register_serializer(LeaveType, LeaveTypeSerializer)
-RoleAccess.register_serializer(LeavePolicy, LeavePolicySerializer)

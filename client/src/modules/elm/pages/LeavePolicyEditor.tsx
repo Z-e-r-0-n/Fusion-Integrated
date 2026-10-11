@@ -1,6 +1,6 @@
 // Leave Policy Editor
-import { Table, Thead, Tbody, Tr, Th, Td, Paper, Stack, Title, Button, LoadingOverlay, Text, Select } from '@mantine/core';
-import { useLeavePolicies } from '../../api/hooks';
+import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
+import { useLeavePolicies } from '../api/hooks';
 import { useNavigate } from 'react-router-dom';
 
 export default function LeavePolicyEditor() {
@@ -9,7 +9,7 @@ export default function LeavePolicyEditor() {
 
   if (isLoading) return (
     <Paper p="md">
-      <LoadingOverlay visible={true} overlayOpacity={0.1}>
+      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
         <Title order={3}>Leave Policies</Title>
         <Text>Loading policies...</Text>
       </LoadingOverlay>
@@ -27,25 +27,25 @@ export default function LeavePolicyEditor() {
     <Paper p="md">
       <Title order={3}>Leave Policies</Title>
       <Table>
-        <Thead>
-          <Tr>
-            <Th>Name</Th>
-            <Th>Description</Th>
-            <Th>Status</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {data.map((policy) => (
-            <Tr key={policy.id}>
-              <Td>{policy.name}</Td>
-              <Td>{policy.description}</Td>
-              <Td>
-                <StatusBadge color={policy.status === 'ACTIVE' ? 'green' : 'yellow'}>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Description</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th>Actions</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {data.map((policy: Record<string, any>) => (
+            <Table.Tr key={policy.id}>
+              <Table.Td>{policy.name}</Table.Td>
+              <Table.Td>{policy.description}</Table.Td>
+              <Table.Td>
+                <Badge color={policy.status === 'ACTIVE' ? 'green' : 'yellow'}>
                   {policy.status}
-                </StatusBade>
-              </Td>
-              <Td>
+                </Badge>
+              </Table.Td>
+              <Table.Td>
                 <Stack>
                   <Button
                     variant="default"
@@ -60,10 +60,10 @@ export default function LeavePolicyEditor() {
                     Edit
                   </Button>
                 </Stack>
-              </Td>
-            </Tr>
+              </Table.Td>
+            </Table.Tr>
           ))}
-        </Tbody>
+        </Table.Tbody>
       </Table>
     </Paper>
   );

@@ -1,6 +1,6 @@
 // Leave Type Catalog
-import { Table, Thead, Tbody, Tr, Th, Td, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
-import { useLeaveTypes } from '../../api/hooks';
+import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
+import { useLeaveTypes } from '../api/hooks';
 import { useNavigate } from 'react-router-dom';
 
 export default function LeaveTypeCatalog() {
@@ -9,7 +9,7 @@ export default function LeaveTypeCatalog() {
 
   if (isLoading) return (
     <Paper p="md">
-      <LoadingOverlay visible={true} overlayOpacity={0.1}>
+      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
         <Title order={3}>Leave Types</Title>
         <Text>Loading types...</Text>
       </LoadingOverlay>
@@ -27,25 +27,25 @@ export default function LeaveTypeCatalog() {
     <Paper p="md">
       <Title order={3}>Leave Types</Title>
       <Table>
-        <Thead>
-          <Tr>
-            <Th>Name</Th>
-            <Th>Description</Th>
-            <Th>Status</Th>
-            <Th>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {data.map((type) => (
-            <Tr key={type.id}>
-              <Td>{type.name}</Td>
-              <Td>{type.description}</Td>
-              <Td>
-                <StatusBadge color={type.status === 'ACTIVE' ? 'green' : 'yellow'}>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Name</Table.Th>
+            <Table.Th>Description</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th>Actions</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {data.map((type: Record<string, any>) => (
+            <Table.Tr key={type.id}>
+              <Table.Td>{type.name}</Table.Td>
+              <Table.Td>{type.description}</Table.Td>
+              <Table.Td>
+                <Badge color={type.status === 'ACTIVE' ? 'green' : 'yellow'}>
                   {type.status}
-                </StatusBadge>
-              </Td>
-              <Td>
+                </Badge>
+              </Table.Td>
+              <Table.Td>
                 <Stack>
                   <Button
                     variant="default"
@@ -54,10 +54,10 @@ export default function LeaveTypeCatalog() {
                     View
                   </Button>
                 </Stack>
-              </Td>
-            </Tr>
+              </Table.Td>
+            </Table.Tr>
           ))}
-        </Tbody>
+        </Table.Tbody>
       </Table>
     </Paper>
   );

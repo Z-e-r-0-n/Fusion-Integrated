@@ -1,5 +1,7 @@
+from django.db import models
+from django.utils import timezone
 from datetime import datetime
-from fusion_auth import Principal
+from fusion_auth.principal import Principal
 
 from core.db.mixins import TimeStampedModel
 
@@ -32,40 +34,35 @@ class LeaveType(models.Model):
         return self.get_type_display()
 
 class LeaveBalance(models.Model):
-    employee = models.ForeignKey('fusion.Employee', on_delete=models.CASCADE)
+    employee = models.BigIntegerField()
     leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     last_updated = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.employee.name} - {self.leave_type} ({self.balance} days)"
+        return f"{self.employee} - {self.leave_type} ({self.balance} days)"
 
 class LeaveRequest(models.Model):
-    employee = models.ForeignKey('fusion.Employee', on_delete=models.CASCADE)
+    employee = models.BigIntegerField()
     leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     start_date = models.DateField()
     end_date = models.DateField()
     purpose = models.TextField()
-    substitute = models.ForeignKey('fusion.Employee', on_delete=models.SET_NULL, null=True, blank=True, related_name='substitutes')
+    substitute = models.BigIntegerField(null=True, blank=True)
     status = models.CharField(max_length=15, choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected'), ('CANCELLED', 'Cancelled')])
     created_at = models.DateTimeField(default=timezone.now)
     approved_at = models.DateTimeField(null=True)
     notes = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.employee.name} - {self.leave_type} ({self.start_date} - {self.end_date})" 
+        return f"{self.employee} - {self.leave_type} ({self.start_date} - {self.end_date})"
 
 class LeavePolicy(models.Model):
     type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     max_days = models.PositiveIntegerField(default=0)
     carry_forward = models.BooleanField(default=False)
     requires_substitute = models.BooleanField(default=False)
-    holiday_calendar = models.ForeignKey('fusion.HolidayCalendar', on_delete=models.SET_NULL, null=True)
+    holiday_calendar = models.BigIntegerField(null=True)
 
     def __str__(self):
         return f"{self.type} Policy"
-
-# Add role-based access controls
-RoleAccess.register(LeaveRequest, 'view_leave_request', 'approve_leave_request')
-RoleAccess.register(LeaveBalance, 'view_leave_balance', 'update_leave_balance')
-RoleAccess.register(LeavePolicy, 'view_leave_policy', 'edit_leave_policy')

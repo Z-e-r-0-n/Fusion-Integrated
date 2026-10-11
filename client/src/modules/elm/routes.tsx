@@ -1,37 +1,13 @@
-// ELM routes
-import type { RouteObject } from 'react-router-dom';
+import { Navigate, type RouteObject } from "react-router-dom";
+import LeaveRequestList from "./pages/LeaveRequestList";
+import LeaveBalanceDashboard from "./pages/LeaveBalanceDashboard";
+import LeaveTypeCatalog from "./pages/LeaveTypeCatalog";
+import LeavePolicyEditor from "./pages/LeavePolicyEditor";
 
 export const routes: RouteObject[] = [
-  {
-    path: 'requests',
-    element: <LeaveRequestList />, 
-    loader: async () => ({
-      data: await useLeaveRequests().then(r => r.data),
-      permissions: Principal.has_any_permission('elm.leave_requests.view')
-    })
-  },
-  {
-    path: 'balances',
-    element: <LeaveBalanceDashboard />, 
-    loader: async () => ({
-      data: await useLeaveBalances().then(r => r.data),
-      permissions: Principal.has_any_permission('elm.leave_balances.view')
-    })
-  },
-  {
-    path: 'types',
-    element: <LeaveTypeCatalog />, 
-    loader: async () => ({
-      data: await useLeaveTypes().then(r => r.data),
-      permissions: Principal.has_any_permission('elm.leave_types.view')
-    })
-  },
-  {
-    path: 'policies',
-    element: <LeavePolicyEditor />, 
-    loader: async () => ({
-      data: await useLeavePolicies().then(r => r.data),
-      permissions: Principal.has_any_permission('elm.leave_policies.view')
-    })
-  }
+  { index: true, element: <Navigate to="requests" replace /> },
+  { path: "requests", element: <LeaveRequestList /> },
+  { path: "balances", element: <LeaveBalanceDashboard /> },
+  { path: "types", element: <LeaveTypeCatalog /> },
+  { path: "policies", element: <LeavePolicyEditor /> },
 ];
