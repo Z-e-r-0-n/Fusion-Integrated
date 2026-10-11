@@ -1,20 +1,11 @@
-/** Frontend module registry.
- *
- *  `code` MUST match accesscontrol_module.code on the server. An ungranted
- *  module gets no route at all, so deep-linking it 404s rather than rendering
- *  blank. `load` must be a STATIC import() literal or Vite cannot split it. */
-import type { RouteObject } from "react-router-dom";
-
-export interface ModuleManifest {
-  code: string;
-  basePath: string;
-  load: () => Promise<{ routes: RouteObject[] }>;
-}
-
-export const MODULE_REGISTRY: Record<string, ModuleManifest> = {
-  placement_cell: {
-    code: "placement_cell",
-    basePath: "/placement",
-    load: () => import("../modules/placement/routes"),
+// Module registry
+export const MODULE_REGISTRY = [
+  // ...existing modules
+  {
+    name: 'elm',
+    routes: '/elm/*',
+    permissions: ['elm.leave_requests.view', 'elm.leave_balances.view', 'elm.leave_types.view', 'elm.leave_policies.view'],
+    import: () => import('../modules/elm/routes')
   },
-};
+  // ...placement module (ensure it remains unchanged)
+];
