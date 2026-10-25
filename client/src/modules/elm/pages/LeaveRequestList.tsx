@@ -41,7 +41,7 @@ export default function LeaveRequestList() {
           {data.map((request: Record<string, any>) => (
             <Table.Tr key={request.id}>
               <Table.Td>{request.id}</Table.Td>
-              <Table.Td>{request.employee.name}</Table.Td>
+              <Table.Td>{request.employee}</Table.Td>
               <Table.Td>{request.start_date}</Table.Td>
               <Table.Td>
                 <Badge color={request.status === 'APPROVED' ? 'green' : 'yellow'}>
