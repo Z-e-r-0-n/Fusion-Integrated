@@ -1,31 +1,95 @@
 from rest_framework import serializers
-from .models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy
 
+from .models import (
+    AuthorityRoute,
+    CalendarDay,
+    LeaveBalance,
+    LeaveEvent,
+    LeavePolicy,
+    LeaveRequest,
+    LeaveType,
+)
 
-class LeaveRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LeaveRequest
-        fields = ['id', 'employee', 'leave_type', 'start_date', 'end_date', 'purpose', 'substitute', 'status', 'created_at', 'approved_at', 'notes']
-        read_only_fields = ['id', 'created_at', 'approved_at']
-
-    def validate(self, attrs):
-        # Implement validation logic here
-        return attrs
-
-class LeaveBalanceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LeaveBalance
-        fields = ['id', 'employee', 'leave_type', 'balance', 'last_updated']
-        read_only_fields = ['id', 'last_updated']
 
 class LeaveTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveType
-        fields = ['id', 'type', 'days_allowed', 'carry_forward', 'requires_substitute']
-        read_only_fields = ['id']
+        fields = '__all__'
+        read_only_fields = ('id',)
+
+
+class LeaveBalanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeaveBalance
+        fields = '__all__'
+        read_only_fields = ('id', 'last_updated')
+
+    def validate_balance(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Balance cannot be negative.")
+        return value
+
 
 class LeavePolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = LeavePolicy
-        fields = ['id', 'type', 'max_days', 'carry_forward', 'requires_substitute', 'holiday_calendar']
-        read_only_fields = ['id']
+        fields = '__all__'
+        read_only_fields = ('id',)
+
+    def validate(self, attrs):
+        if attrs.get('escalation_hours') <= attrs.get('reminder_hours') or attrs.get('reminder_hours') <= 0:
+            raise serializers.ValidationError("Escalation hours must be greater than reminder hours, which must be greater than 0.")
+        return attrs
+
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    events = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LeaveRequest
+        fields = [
+            'id', 'employee', 'leave_type', 'start_date', 'end_date', 'purpose', 'substitute',
+            'employee_kind', 'unit', 'half_day', 'station_leave', 'station_details', 'medical_evidence',
+            'days', 'substitute_status', 'route', 'step', 'operation', 'base_request', 'actual_return_date',
+            'status', 'approved_at', 'updated_at', 'created_at', 'notes', 'events'
+        ]
+        read_only_fields = ("id", "employee", "employee_kind", "unit", "days", "substitute_status", "route", "step", "operation", "base_request", "actual_return_date", "status", "approved_at", "updated_at", "created_at", "notes", "events")
+
+    def get_events(self, obj):
+        events = obj.events.all()
+        return LeaveEventSerializer(events, many=True).data
+
+
+class AuthorityRouteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuthorityRoute
+        fields = '__all__'
+        read_only_fields = ('id',)
+
+    def validate_higher_authorities(self, value):
+        if not isinstance(value, list) or not all(isinstance(item, int) for item in value):
+            raise serializers.ValidationError("higher_authorities must be a list of integers.")
+        if not all(item > 0 for item in value):
+            raise serializers.ValidationError("All higher_authorities must be positive integers.")
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("All higher_authorities must be distinct.")
+        return value
+
+
+class CalendarDaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CalendarDay
+        fields = '__all__'
+        read_only_fields = ('id', 'date', 'kind', 'published', 'source')
+
+    def validate_kind(self, value):
+        if value == 'VACATION':
+            raise serializers.ValidationError("Cannot create or update CalendarDay with kind 'VACATION' via ELM API.")
+        return value
+
+
+class LeaveEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeaveEvent
+        fields = '__all__'
+        read_only_fields = ('id', 'request', 'employee', 'actor', 'action', 'delta', 'details', 'created_at')

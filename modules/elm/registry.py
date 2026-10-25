@@ -44,11 +44,16 @@ PERMISSIONS = [
     ("elm.leave_requests.approve", "Process generated leave-request actions"),
     ("elm.leave_balances.manage", "Update leave balances"),
     ("elm.leave_policies.manage", "Maintain generated leave configuration"),
+    ('elm.leave_requests.apply', 'Submit and manage own leave requests'), ('elm.leave_records.manage', 'Maintain authorized leave records'),
     *[(code, code.rsplit(".", 1)[-1]) for code in SYSTEM_PERMISSIONS],
 ]
 _VIEW = [item["required_permission"] for item in NAV_ITEMS]
 ROLE_GRANTS = {
-    "Employee": _VIEW,
-    "Unit Head": [*_VIEW, "elm.leave_requests.approve", "elm.leave_balances.manage"],
-    "Leave Administrator": [*_VIEW, "elm.leave_policies.manage"],
+    "Employee": [*_VIEW, "elm.leave_requests.apply"],
+    "Unit Head": [*_VIEW, "elm.leave_requests.apply", "elm.leave_requests.approve"],
+    "Deputy Registrar (Estt.)": [*_VIEW, "elm.leave_requests.apply", "elm.leave_requests.approve"],
+    "Dean": [*_VIEW, "elm.leave_requests.apply", "elm.leave_requests.approve"],
+    "Registrar": [*_VIEW, "elm.leave_requests.apply", "elm.leave_requests.approve"],
+    "Director": [*_VIEW, "elm.leave_requests.apply", "elm.leave_requests.approve"],
+    "Leave Administrator": [*_VIEW, "elm.leave_requests.apply", "elm.leave_policies.manage", "elm.leave_balances.manage", "elm.leave_records.manage"]
 }

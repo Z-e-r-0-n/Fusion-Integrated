@@ -17,13 +17,15 @@ For the intended taxonomy of modules not yet built, see
 
 | Code | What it allows | Held by |
 |---|---|---|
-| `elm.leave_requests.view` | View leave requests | `Employee`, `Leave Administrator`, `Unit Head` |
-| `elm.leave_balances.view` | View leave balances | `Employee`, `Leave Administrator`, `Unit Head` |
-| `elm.leave_types.view` | View leave types | `Employee`, `Leave Administrator`, `Unit Head` |
-| `elm.leave_policies.view` | View leave policies | `Employee`, `Leave Administrator`, `Unit Head` |
-| `elm.leave_requests.approve` | Process generated leave-request actions | `Unit Head` |
-| `elm.leave_balances.manage` | Update leave balances | `Unit Head` |
+| `elm.leave_requests.view` | View leave requests | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Employee`, `Leave Administrator`, `Registrar`, `Unit Head` |
+| `elm.leave_balances.view` | View leave balances | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Employee`, `Leave Administrator`, `Registrar`, `Unit Head` |
+| `elm.leave_types.view` | View leave types | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Employee`, `Leave Administrator`, `Registrar`, `Unit Head` |
+| `elm.leave_policies.view` | View leave policies | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Employee`, `Leave Administrator`, `Registrar`, `Unit Head` |
+| `elm.leave_requests.approve` | Process generated leave-request actions | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Registrar`, `Unit Head` |
+| `elm.leave_balances.manage` | Update leave balances | `Leave Administrator` |
 | `elm.leave_policies.manage` | Maintain generated leave configuration | `Leave Administrator` |
+| `elm.leave_requests.apply` | Submit and manage own leave requests | `Dean`, `Deputy Registrar (Estt.)`, `Director`, `Employee`, `Leave Administrator`, `Registrar`, `Unit Head` |
+| `elm.leave_records.manage` | Maintain authorized leave records | `Leave Administrator` |
 | `elm.leave_requests.auto_approve` | auto_approve | _service only_ |
 | `elm.leave_requests.manual_approve` | manual_approve | _service only_ |
 | `elm.leave_balances.update` | update | _service only_ |

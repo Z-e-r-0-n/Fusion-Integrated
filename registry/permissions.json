@@ -36,31 +36,71 @@
     },
     "elm": {
       "grants": {
+        "Dean": [
+          "elm.leave_balances.view",
+          "elm.leave_policies.view",
+          "elm.leave_requests.apply",
+          "elm.leave_requests.approve",
+          "elm.leave_requests.view",
+          "elm.leave_types.view"
+        ],
+        "Deputy Registrar (Estt.)": [
+          "elm.leave_balances.view",
+          "elm.leave_policies.view",
+          "elm.leave_requests.apply",
+          "elm.leave_requests.approve",
+          "elm.leave_requests.view",
+          "elm.leave_types.view"
+        ],
+        "Director": [
+          "elm.leave_balances.view",
+          "elm.leave_policies.view",
+          "elm.leave_requests.apply",
+          "elm.leave_requests.approve",
+          "elm.leave_requests.view",
+          "elm.leave_types.view"
+        ],
         "Employee": [
           "elm.leave_balances.view",
           "elm.leave_policies.view",
+          "elm.leave_requests.apply",
           "elm.leave_requests.view",
           "elm.leave_types.view"
         ],
         "Leave Administrator": [
+          "elm.leave_balances.manage",
           "elm.leave_balances.view",
           "elm.leave_policies.manage",
           "elm.leave_policies.view",
+          "elm.leave_records.manage",
+          "elm.leave_requests.apply",
+          "elm.leave_requests.view",
+          "elm.leave_types.view"
+        ],
+        "Registrar": [
+          "elm.leave_balances.view",
+          "elm.leave_policies.view",
+          "elm.leave_requests.apply",
+          "elm.leave_requests.approve",
           "elm.leave_requests.view",
           "elm.leave_types.view"
         ],
         "Unit Head": [
-          "elm.leave_balances.manage",
           "elm.leave_balances.view",
           "elm.leave_policies.view",
+          "elm.leave_requests.apply",
           "elm.leave_requests.approve",
           "elm.leave_requests.view",
           "elm.leave_types.view"
         ]
       },
       "module_grants": [
+        "Dean",
+        "Deputy Registrar (Estt.)",
+        "Director",
         "Employee",
         "Leave Administrator",
+        "Registrar",
         "Unit Head"
       ],
       "nav": {
@@ -133,6 +173,14 @@
         {
           "code": "elm.leave_policies.manage",
           "label": "Maintain generated leave configuration"
+        },
+        {
+          "code": "elm.leave_requests.apply",
+          "label": "Submit and manage own leave requests"
+        },
+        {
+          "code": "elm.leave_records.manage",
+          "label": "Maintain authorized leave records"
         },
         {
           "code": "elm.leave_requests.auto_approve",
