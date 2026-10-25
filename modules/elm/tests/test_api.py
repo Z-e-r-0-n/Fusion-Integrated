@@ -69,3 +69,88 @@ def created_request(stub_iam):
     }, format='json')
     assert response.status_code == 201, response.data
     return (client, response.data['id'], leave_type)
+
+
+from django.test import TestCase
+from rest_framework.test import APIClient
+from modules.elm.tests.test_submission import pending_context
+from modules.elm.models import LeaveEvent, LeaveBalance
+from decimal import Decimal
+import pytest
+from django.core import exceptions
+
+pytestmark = pytest.mark.django_db
+
+def test_balance_employee_scope_and_write_denial(stub_iam):
+    req, applicant, authority, leave_type = pending_context()
+    other = LeaveBalance.objects.create(employee=301, leave_type=leave_type, year=2026, balance=5)
+    client = api_as(stub_iam, 101, ('elm.leave_balances.view',))
+    
+    response = client.get('/api/v1/elm/balances/')
+    assert response.status_code == 200
+    results = response.data['results']
+    assert len(results) == 1
+    assert results[0]['employee'] == 101
+    
+    response = client.get(f'/api/v1/elm/balances/{other.pk}/')
+    assert response.status_code == 404
+    
+    response = client.post('/api/v1/elm/balances/', {
+        'employee': 999,
+        'leave_type': leave_type.pk,
+        'balance': 999,
+        'year': 2026
+    })
+    assert response.status_code == 405
+    
+    response = client.patch(f'/api/v1/elm/balances/{LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).pk}/', {'balance': 999})
+    assert response.status_code == 405
+    
+    response = client.post(f'/api/v1/elm/balances/{LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).pk}/adjust/', {
+        'balance': '999',
+        'reason': 'x',
+        'evidence': 'y'
+    })
+    assert response.status_code == 403
+    
+    balance = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
+    assert balance.balance == Decimal('8')
+
+def test_balance_admin_adjustment_requires_evidence_and_audits_delta(stub_iam):
+    req, applicant, authority, leave_type = pending_context()
+    row = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
+    client = api_as(stub_iam, 201, ('elm.leave_balances.view', 'elm.leave_balances.manage'))
+    
+    response = client.post(f'/api/v1/elm/balances/{row.pk}/adjust/', {'balance': '6'})
+    assert response.status_code == 400
+    
+    response = client.post(f'/api/v1/elm/balances/{row.pk}/adjust/', {
+        'balance': '6',
+        'reason': 'Paper record correction',
+        'evidence': 'PAPER-42',
+        'employee': 999
+    })
+    assert response.status_code == 200
+    
+    row.refresh_from_db()
+    assert row.balance == Decimal('6')
+    assert row.employee == 101
+    
+    event = LeaveEvent.objects.filter(
+        employee=101,
+        actor=201,
+        action='BALANCE_CORRECTED',
+        delta=Decimal('-2'),
+        details__evidence='PAPER-42'
+    ).exists()
+    assert event
+    
+    response = client.post(f'/api/v1/elm/balances/{row.pk}/adjust/', {
+        'balance': '-1',
+        'reason': 'Invalid adjustment',
+        'evidence': 'INVALID-123'
+    })
+    assert response.status_code == 400
+    
+    row.refresh_from_db()
+    assert row.balance == Decimal('6')

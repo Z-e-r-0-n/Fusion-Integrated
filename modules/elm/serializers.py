@@ -37,8 +37,27 @@ class LeavePolicySerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
     def validate(self, attrs):
-        if attrs.get('escalation_hours') <= attrs.get('reminder_hours') or attrs.get('reminder_hours') <= 0:
-            raise serializers.ValidationError("Escalation hours must be greater than reminder hours, which must be greater than 0.")
+        reminder_hours = attrs.get('reminder_hours')
+        escalation_hours = attrs.get('escalation_hours')
+
+        if self.instance:
+            if reminder_hours is None:
+                reminder_hours = self.instance.reminder_hours
+            if escalation_hours is None:
+                escalation_hours = self.instance.escalation_hours
+        else:
+            if reminder_hours is None:
+                reminder_hours = 24
+            if escalation_hours is None:
+                escalation_hours = 48
+
+        if reminder_hours <= 0:
+            raise serializers.ValidationError('Escalation must exceed a positive reminder threshold')
+        if escalation_hours <= reminder_hours:
+            raise serializers.ValidationError('Escalation must exceed a positive reminder threshold')
+
+        attrs['reminder_hours'] = reminder_hours
+        attrs['escalation_hours'] = escalation_hours
         return attrs
 
 

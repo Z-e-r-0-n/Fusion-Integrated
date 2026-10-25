@@ -77,6 +77,30 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         obj = self.get_object()
         req = renominate(obj.pk, request.principal, request.data.get('substitute'))
         return Response(self.get_serializer(req).data)
+    @action(detail=True, methods=['post'])
+    def amend(self, request, pk=None):
+        from rest_framework import serializers
+        from rest_framework.exceptions import ValidationError
+        from modules.elm.amendments import cancel_request, extension_request, resumption_request
+
+        obj = self.get_object()
+        operation = request.data.get('operation')
+
+        if operation == 'CANCELLATION':
+            child = cancel_request(obj.pk, request.principal)
+        elif operation == 'EXTENSION':
+            serializer = self.get_serializer(data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            end = serializers.DateField().run_validation(request.data.get('end_date'))
+            child = extension_request(obj.pk, request.principal, end, serializer.validated_data)
+        elif operation == 'RESUMPTION':
+            actual = serializers.DateField().run_validation(request.data.get('actual_return_date'))
+            notes = serializers.CharField(allow_blank=False).run_validation(request.data.get('notes'))
+            child = resumption_request(obj.pk, request.principal, actual, notes)
+        else:
+            raise ValidationError('Unknown amendment operation')
+
+        return Response(self.get_serializer(child).data, status=201)
     def update(self, request, *args, **kwargs):
         """
         Handle leave request updates with validation.
@@ -87,30 +111,80 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
 
-class LeaveBalanceViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing leave balances.
-    """
+from rest_framework import viewsets, serializers
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+from modules.elm.models import LeaveBalance, LeaveEvent
+from modules.elm.validation import locked_employee
+from modules.elm.serializers import LeaveBalanceSerializer
+from fusion_auth.permissions import IsAuthenticatedPrincipal, HasModuleGrant, HasPermission
+
+class LeaveBalanceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LeaveBalance.objects.all()
     serializer_class = LeaveBalanceSerializer
 
     def get_permissions(self):
-        """
-        Apply role-based access controls.
-        """
-        if self.action in ['update', 'partial_update']:
-            return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_balances.manage")()]
-        return [permissions.IsAuthenticated(), HasModuleGrant("elm")(), HasPermission("elm.leave_balances.view")()]
+        if self.action == 'adjust':
+            code = 'elm.leave_balances.manage'
+        else:
+            code = 'elm.leave_balances.view'
+        return [
+            IsAuthenticatedPrincipal(),
+            HasModuleGrant('elm')(),
+            HasPermission(code)()
+        ]
 
-    def perform_update(self, serializer):
-        """
-        Update leave balance with proper accounting.
-        """
-        instance = self.get_object()
-        # Example: Deduct balance for approved leave
-        if serializer.validated_data.get('approved', False):
-            instance.balance = F('balance') - serializer.validated_data.get('days', 0)
-            instance.save(update_fields=['balance'])
+    def get_queryset(self):
+        principal = getattr(self.request, 'principal', None)
+        if not principal:
+            return LeaveBalance.objects.none()
+        if principal.has_permission('elm.leave_balances.manage'):
+            return LeaveBalance.objects.all().order_by('employee', 'year', 'id')
+        return LeaveBalance.objects.filter(employee=principal.user_id).order_by('employee', 'year', 'id')
+
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def adjust(self, request, pk=None):
+        obj = self.get_object()
+        reason = request.data.get('reason', '')
+        evidence = request.data.get('evidence', '')
+        if not reason or not evidence:
+            raise ValidationError('Reason and evidence are required')
+
+        locked_employee(obj.employee)
+        row = LeaveBalance.objects.select_for_update().get(pk=obj.pk)
+
+        balance_data = request.data.get('balance')
+        if not balance_data:
+            raise ValidationError('Balance is required')
+
+        try:
+            new_balance = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0).run_validation(balance_data)
+        except serializers.ValidationError as e:
+            raise ValidationError(e.detail)
+
+        delta = new_balance - row.balance
+        row.balance = new_balance
+        row.last_updated = timezone.now()
+        row.save()
+
+        LeaveEvent.objects.create(
+            employee=row.employee,
+            actor=request.principal.user_id,
+            action='BALANCE_CORRECTED',
+            delta=delta,
+            details={
+                'reason': reason.strip(),
+                'evidence': evidence.strip(),
+                'year': row.year,
+                'leave_type': row.leave_type_id
+            }
+        )
+
+        return Response(self.get_serializer(row).data)
 
 
 class LeaveTypeViewSet(viewsets.ModelViewSet):
@@ -119,7 +193,12 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     """
     queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
-    permission_classes = [IsAuthenticatedPrincipal, HasModuleGrant("elm"), HasPermission("elm.leave_types.view"), HasPermission("elm.leave_policies.manage")]
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve', 'metadata'):
+            code = 'elm.leave_types.view' if self.queryset.model is LeaveType else 'elm.leave_policies.view'
+        else:
+            code = 'elm.leave_policies.manage'
+        return [IsAuthenticatedPrincipal(), HasModuleGrant('elm')(), HasPermission(code)()]
 
 
 class LeavePolicyViewSet(viewsets.ModelViewSet):
@@ -128,7 +207,12 @@ class LeavePolicyViewSet(viewsets.ModelViewSet):
     """
     queryset = LeavePolicy.objects.all()
     serializer_class = LeavePolicySerializer
-    permission_classes = [IsAuthenticatedPrincipal, HasModuleGrant("elm"), HasPermission("elm.leave_policies.view"), HasPermission("elm.leave_policies.manage")]
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve', 'metadata'):
+            code = 'elm.leave_types.view' if self.queryset.model is LeaveType else 'elm.leave_policies.view'
+        else:
+            code = 'elm.leave_policies.manage'
+        return [IsAuthenticatedPrincipal(), HasModuleGrant('elm')(), HasPermission(code)()]
 
     def get_queryset(self):
         """

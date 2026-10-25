@@ -16,7 +16,6 @@ def policy_for(leave_type, kind, medical_evidence=''):
 
 
 from modules.elm.models import LeaveRequest
-from rest_framework.exceptions import ValidationError
 
 def ensure_overlap_free(employee, leave_type, start, end, half, exclude=None):
     queryset = LeaveRequest.objects.filter(
@@ -39,8 +38,6 @@ def ensure_overlap_free(employee, leave_type, start, end, half, exclude=None):
 
 
 from modules.directory.models import UserRef
-from modules.elm.models import LeaveRequest
-from rest_framework.exceptions import ValidationError
 
 def ensure_nominee(employee, nominee, required, start, end):
     if nominee is None:
@@ -63,8 +60,6 @@ def ensure_nominee(employee, nominee, required, start, end):
 
 
 from decimal import Decimal
-from rest_framework.exceptions import ValidationError
-from modules.elm.models import LeaveRequest
 from modules.elm.validation import account
 
 def ensure_balance(employee, leave_type, start, kind, days, exclude=None):

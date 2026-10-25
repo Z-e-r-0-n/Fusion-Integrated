@@ -106,7 +106,6 @@ def test_nominee_consent_is_not_automatic():
 
 
 from modules.elm.decisions import decide
-from datetime import date
 
 def pending_context(substitute=None):
     leave_type, applicant = seed()

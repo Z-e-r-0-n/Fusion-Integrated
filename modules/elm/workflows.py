@@ -100,9 +100,6 @@ def renominate(pk, principal, substitute):
     return req
 
 
-from modules.elm.models import LeaveRequest
-from modules.elm.validation import locked_employee
-from rest_framework.exceptions import NotFound
 
 def get_request(pk):
     try:

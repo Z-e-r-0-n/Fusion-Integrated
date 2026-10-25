@@ -1,8 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
 
-from django.core.exceptions import ValidationError, PermissionDenied
-from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.db.models import F
 from django.db.models.query import QuerySet
 from modules.elm.models import LeaveRequest
@@ -40,7 +39,6 @@ def decision_request(pk, principal):
     return req
 
 
-from rest_framework.exceptions import ValidationError
 from modules.elm.workflows import emit, notify_task
 
 def advance(req, principal, decision, notes=''):
@@ -65,11 +63,12 @@ def advance(req, principal, decision, notes=''):
 
 
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 from modules.elm.checks import ensure_balance
-from modules.elm.workflows import emit
 
 def approve(req, actor, notes=''):
+    if req.operation == 'RESUMPTION':
+        from modules.elm.amendments import approve_resumption
+        return approve_resumption(req, actor, notes)
     if req.operation == 'CANCELLATION':
         from modules.elm.amendments import approve_cancellation
         return approve_cancellation(req, actor, notes)
@@ -89,9 +88,6 @@ def approve(req, actor, notes=''):
     return req
 
 
-from django.db import transaction
-from rest_framework.exceptions import ValidationError
-from modules.elm.workflows import emit
 
 @transaction.atomic
 def decide(pk, principal, decision, notes=''):
