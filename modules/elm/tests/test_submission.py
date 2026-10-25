@@ -1,66 +1,72 @@
-from modules.elm.workflows import substitute_response, renominate
-
-
-
-
-import pytest
 from datetime import date
 from decimal import Decimal
-from rest_framework.exceptions import ValidationError, PermissionDenied
-from modules.directory.models import UserRef
-from modules.elm.models import LeaveType, AuthorityRoute, LeaveBalance, LeaveRequest, LeaveEvent
-from modules.elm.workflows import submit, withdraw
+
+import pytest
+from rest_framework.exceptions import PermissionDenied, ValidationError
+
 from conftest import make_principal
-
-
-
+from modules.directory.models import UserRef
+from modules.elm.decisions import decide
+from modules.elm.models import AuthorityRoute, LeaveBalance, LeaveEvent, LeaveRequest, LeaveType
+from modules.elm.workflows import submit, substitute_response, withdraw
 
 
 def seed():
-    user_id101 = UserRef.objects.create(user_id=101, username='u101', kind='staff', department='CSE')
-    user_id201 = UserRef.objects.create(user_id=201, username='u201', kind='staff', department='CSE')
-    user_id301 = UserRef.objects.create(user_id=301, username='u301', kind='faculty', department='CSE')
-    leave_type = LeaveType.objects.create(type='CL')
-    authority_route = AuthorityRoute.objects.create(
-        employee=101,
-        leave_category='',
-        unit_head=201,
-        higher_authorities=[201]
+    user_id101 = UserRef.objects.create(
+        user_id=101, username="u101", kind="staff", department="CSE"
     )
-    principal = make_principal(user_id=101, kind='staff', modules=('elm',), permissions=('elm.leave_requests.apply', 'elm.leave_requests.view'))
+    user_id201 = UserRef.objects.create(
+        user_id=201, username="u201", kind="staff", department="CSE"
+    )
+    user_id301 = UserRef.objects.create(
+        user_id=301, username="u301", kind="faculty", department="CSE"
+    )
+    leave_type = LeaveType.objects.create(type="CL")
+    authority_route = AuthorityRoute.objects.create(
+        employee=101, leave_category="", unit_head=201, higher_authorities=[201]
+    )
+    principal = make_principal(
+        user_id=101,
+        kind="staff",
+        modules=("elm",),
+        permissions=("elm.leave_requests.apply", "elm.leave_requests.view"),
+    )
     return (leave_type, principal)
 
 
 def test_submit_sets_owner_and_pending_route():
     leave_type, principal = seed()
     data = {
-        'leave_type': leave_type,
-        'start_date': date(2026, 11, 2),
-        'end_date': date(2026, 11, 2),
-        'purpose': 'Family work',
-        'employee': 999,
-        'status': 'APPROVED',
-        'route': [999]
+        "leave_type": leave_type,
+        "start_date": date(2026, 11, 2),
+        "end_date": date(2026, 11, 2),
+        "purpose": "Family work",
+        "employee": 999,
+        "status": "APPROVED",
+        "route": [999],
     }
     req = submit(data, principal)
     assert req.employee == 101
-    assert req.status == 'PENDING'
+    assert req.status == "PENDING"
     assert req.route == [201]
-    assert req.days == Decimal('1')
-    assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('8')
-    assert LeaveEvent.objects.filter(request=req, action='TASK_ASSIGNED', details__recipient=201).exists()
+    assert req.days == Decimal("1")
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("8")
+    assert LeaveEvent.objects.filter(
+        request=req, action="TASK_ASSIGNED", details__recipient=201
+    ).exists()
 
 
 def test_optional_nominee_cannot_be_self():
     leave_type, principal = seed()
     data = {
-        'leave_type': leave_type,
-        'start_date': date(2026, 11, 2),
-        'end_date': date(2026, 11, 2),
-        'purpose': 'Family',
-        'substitute': 101
+        "leave_type": leave_type,
+        "start_date": date(2026, 11, 2),
+        "end_date": date(2026, 11, 2),
+        "purpose": "Family",
+        "substitute": 101,
     }
-    pass
     with pytest.raises(ValidationError):
         submit(data, principal)
     assert LeaveRequest.objects.count() == 0
@@ -69,82 +75,93 @@ def test_optional_nominee_cannot_be_self():
 pytestmark = pytest.mark.django_db
 
 
-
 def test_assigned_approval_debits_once():
     req, applicant, authority, leave_type = pending_context()
-    decide(req.pk, authority, 'APPROVE')
+    decide(req.pk, authority, "APPROVE")
     req.refresh_from_db()
-    assert req.status == 'APPROVED'
-    assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('7')
+    assert req.status == "APPROVED"
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("7")
 
 
 def test_unassigned_authority_cannot_approve():
     req, applicant, authority, leave_type = pending_context()
     with pytest.raises(PermissionDenied):
-        decide(req.pk, applicant, 'APPROVE')
+        decide(req.pk, applicant, "APPROVE")
     req.refresh_from_db()
-    assert req.status == 'PENDING'
-    assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('8')
+    assert req.status == "PENDING"
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("8")
 
 
 def test_withdraw_terminates_pending_approval():
     req, applicant, authority, leave_type = pending_context()
     withdraw(req.pk, applicant)
     req.refresh_from_db()
-    assert req.status == 'WITHDRAWN'
+    assert req.status == "WITHDRAWN"
     with pytest.raises(ValidationError):
-        decide(req.pk, authority, 'APPROVE')
-    assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('8')
+        decide(req.pk, authority, "APPROVE")
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("8")
 
 
 def test_nominee_consent_is_not_automatic():
     req, applicant, authority, leave_type = pending_context(substitute=301)
-    assert req.substitute_status == 'PENDING'
+    assert req.substitute_status == "PENDING"
     with pytest.raises(ValidationError):
-        decide(req.pk, authority, 'APPROVE')
-    assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('8')
+        decide(req.pk, authority, "APPROVE")
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("8")
 
-
-from modules.elm.decisions import decide
 
 def pending_context(substitute=None):
     leave_type, applicant = seed()
     data = {
-        'leave_type': leave_type,
-        'start_date': date(2026, 11, 2),
-        'end_date': date(2026, 11, 2),
-        'purpose': 'Family'
+        "leave_type": leave_type,
+        "start_date": date(2026, 11, 2),
+        "end_date": date(2026, 11, 2),
+        "purpose": "Family",
     }
     if substitute:
-        data['substitute'] = substitute
+        data["substitute"] = substitute
     req = submit(data, applicant)
-    authority = make_principal(user_id=201, kind='staff', modules=('elm',), permissions=('elm.leave_requests.approve',))
+    authority = make_principal(
+        user_id=201, kind="staff", modules=("elm",), permissions=("elm.leave_requests.approve",)
+    )
     return (req, applicant, authority, leave_type)
 
 
 def test_accepted_substitute_allows_approval():
     req, applicant, authority, leave_type = pending_context(substitute=301)
-    nominee = make_principal(user_id=301, kind='faculty', modules=('elm',), permissions=('elm.leave_requests.view',))
+    nominee = make_principal(
+        user_id=301, kind="faculty", modules=("elm",), permissions=("elm.leave_requests.view",)
+    )
     substitute_response(req.pk, nominee, True)
-    decide(req.pk, authority, 'APPROVE')
+    decide(req.pk, authority, "APPROVE")
     req.refresh_from_db()
-    assert req.status == 'APPROVED'
+    assert req.status == "APPROVED"
     assert LeaveBalance.objects.filter(employee=101, leave_type=leave_type, year=2026).exists()
     balance = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
-    assert balance.balance == Decimal('7')
+    assert balance.balance == Decimal("7")
 
 
 def test_approval_cannot_debit_twice():
     req, applicant, authority, leave_type = pending_context()
-    decide(req.pk, authority, 'APPROVE')
+    decide(req.pk, authority, "APPROVE")
     with pytest.raises(ValidationError):
-        decide(req.pk, authority, 'APPROVE')
-    LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal('7')
+        decide(req.pk, authority, "APPROVE")
+    LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal("7")
 
 
 def test_approval_permission_does_not_grant_unassigned_requests():
     req, applicant, authority, leave_type = pending_context()
-    other = make_principal(user_id=301, kind='faculty', modules=('elm',), permissions=('elm.leave_requests.approve',))
+    other = make_principal(
+        user_id=301, kind="faculty", modules=("elm",), permissions=("elm.leave_requests.approve",)
+    )
     with pytest.raises(PermissionDenied):
-        decide(req.pk, other, 'APPROVE')
+        decide(req.pk, other, "APPROVE")
     assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == 8

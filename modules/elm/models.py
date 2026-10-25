@@ -1,29 +1,28 @@
+from django.db import models
 from django.utils import timezone
 
 
 def current_year():
     return timezone.localdate().year
 
-from django.db import models
-
 
 class LeaveType(models.Model):
-    CL = 'CL'
-    RH = 'RH'
-    SCL = 'SCL'
-    EL = 'EL'
-    COL = 'COL'
-    VL = 'VL'
-    STATION_LEAVE = 'STATION_LEAVE'
+    CL = "CL"
+    RH = "RH"
+    SCL = "SCL"
+    EL = "EL"
+    COL = "COL"
+    VL = "VL"
+    STATION_LEAVE = "STATION_LEAVE"
 
     TYPE_CHOICES = [
-        (CL, 'Casual Leave'),
-        (RH, 'Restricted Holiday'),
-        (SCL, 'Special Casual Leave'),
-        (EL, 'Earned Leave'),
-        (COL, 'Commuted Leave'),
-        (VL, 'Vacation Leave'),
-        (STATION_LEAVE, 'Station Leave'),
+        (CL, "Casual Leave"),
+        (RH, "Restricted Holiday"),
+        (SCL, "Special Casual Leave"),
+        (EL, "Earned Leave"),
+        (COL, "Commuted Leave"),
+        (VL, "Vacation Leave"),
+        (STATION_LEAVE, "Station Leave"),
     ]
 
     type = models.CharField(max_length=13, choices=TYPE_CHOICES)
@@ -44,7 +43,9 @@ class LeaveBalance(models.Model):
     leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     year = models.PositiveIntegerField(default=current_year)
-    employee_kind = models.CharField(max_length=10, choices=[('faculty', 'Faculty'), ('staff', 'Staff')], default='staff')
+    employee_kind = models.CharField(
+        max_length=10, choices=[("faculty", "Faculty"), ("staff", "Staff")], default="staff"
+    )
     last_updated = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -61,7 +62,9 @@ class LeavePolicy(models.Model):
     carry_forward = models.BooleanField(default=False)
     requires_substitute = models.BooleanField(default=False)
     medical_evidence_required = models.BooleanField(default=False)
-    applicable_kind = models.CharField(max_length=10, choices=[('faculty', 'Faculty'), ('staff', 'Staff')], blank=True)
+    applicable_kind = models.CharField(
+        max_length=10, choices=[("faculty", "Faculty"), ("staff", "Staff")], blank=True
+    )
     reminder_hours = models.PositiveIntegerField(default=24)
     escalation_hours = models.PositiveIntegerField(default=48)
     holiday_calendar = models.BigIntegerField(null=True)
@@ -77,37 +80,57 @@ class LeaveRequest(models.Model):
     end_date = models.DateField()
     purpose = models.TextField()
     substitute = models.BigIntegerField(null=True, blank=True)
-    employee_kind = models.CharField(max_length=10, choices=[('faculty', 'Faculty'), ('staff', 'Staff')], default='staff')
+    employee_kind = models.CharField(
+        max_length=10, choices=[("faculty", "Faculty"), ("staff", "Staff")], default="staff"
+    )
     unit = models.CharField(max_length=255, blank=True)
-    half_day = models.CharField(max_length=10, choices=[('FULL', 'Full'), ('FIRST', 'First Half'), ('SECOND', 'Second Half')], default='FULL')
+    half_day = models.CharField(
+        max_length=10,
+        choices=[("FULL", "Full"), ("FIRST", "First Half"), ("SECOND", "Second Half")],
+        default="FULL",
+    )
     station_leave = models.BooleanField(default=False)
     station_details = models.TextField(blank=True)
     medical_evidence = models.TextField(blank=True)
     days = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    substitute_status = models.CharField(max_length=15, choices=[
-        ('NONE', 'None'),
-        ('PENDING', 'Pending'),
-        ('ACCEPTED', 'Accepted'),
-        ('DECLINED', 'Declined')
-    ], default='NONE')
+    substitute_status = models.CharField(
+        max_length=15,
+        choices=[
+            ("NONE", "None"),
+            ("PENDING", "Pending"),
+            ("ACCEPTED", "Accepted"),
+            ("DECLINED", "Declined"),
+        ],
+        default="NONE",
+    )
     route = models.JSONField(default=list, blank=True)
     step = models.PositiveIntegerField(default=0)
-    operation = models.CharField(max_length=15, choices=[
-        ('LEAVE', 'Leave'),
-        ('CANCELLATION', 'Cancellation'),
-        ('EXTENSION', 'Extension'),
-        ('RESUMPTION', 'Resumption')
-    ], default='LEAVE')
-    base_request = models.ForeignKey('self', on_delete=models.PROTECT, related_name='amendments', null=True)
+    operation = models.CharField(
+        max_length=15,
+        choices=[
+            ("LEAVE", "Leave"),
+            ("CANCELLATION", "Cancellation"),
+            ("EXTENSION", "Extension"),
+            ("RESUMPTION", "Resumption"),
+        ],
+        default="LEAVE",
+    )
+    base_request = models.ForeignKey(
+        "self", on_delete=models.PROTECT, related_name="amendments", null=True
+    )
     actual_return_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=15, choices=[
-        ('PENDING', 'Pending'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-        ('CANCELLED', 'Cancelled'),
-        ('WITHDRAWN', 'Withdrawn'),
-        ('RESUMED', 'Resumed')
-    ], default='PENDING')
+    status = models.CharField(
+        max_length=15,
+        choices=[
+            ("PENDING", "Pending"),
+            ("APPROVED", "Approved"),
+            ("REJECTED", "Rejected"),
+            ("CANCELLED", "Cancelled"),
+            ("WITHDRAWN", "Withdrawn"),
+            ("RESUMED", "Resumed"),
+        ],
+        default="PENDING",
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(default=timezone.now)
@@ -126,25 +149,26 @@ class AuthorityRoute(models.Model):
     director_self = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ['employee', 'unit', 'leave_category']
+        unique_together = ["employee", "unit", "leave_category"]
 
 
 class CalendarDay(models.Model):
     date = models.DateField()
-    kind = models.CharField(max_length=10, choices=[
-        ('CLOSED', 'Closed'),
-        ('RH', 'Restricted Holiday'),
-        ('VACATION', 'Vacation')
-    ])
+    kind = models.CharField(
+        max_length=10,
+        choices=[("CLOSED", "Closed"), ("RH", "Restricted Holiday"), ("VACATION", "Vacation")],
+    )
     published = models.BooleanField(default=False)
     source = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        unique_together = ['date', 'kind']
+        unique_together = ["date", "kind"]
 
 
 class LeaveEvent(models.Model):
-    request = models.ForeignKey(LeaveRequest, on_delete=models.PROTECT, related_name='events', null=True)
+    request = models.ForeignKey(
+        LeaveRequest, on_delete=models.PROTECT, related_name="events", null=True
+    )
     employee = models.BigIntegerField()
     actor = models.BigIntegerField(null=True, blank=True)
     action = models.CharField(max_length=64)
@@ -153,7 +177,7 @@ class LeaveEvent(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
 
 class YearEndRun(models.Model):
