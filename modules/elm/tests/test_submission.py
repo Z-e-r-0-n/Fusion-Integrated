@@ -12,17 +12,11 @@ from modules.elm.workflows import submit, substitute_response, withdraw
 
 
 def seed():
-    user_id101 = UserRef.objects.create(
-        user_id=101, username="u101", kind="staff", department="CSE"
-    )
-    user_id201 = UserRef.objects.create(
-        user_id=201, username="u201", kind="staff", department="CSE"
-    )
-    user_id301 = UserRef.objects.create(
-        user_id=301, username="u301", kind="faculty", department="CSE"
-    )
+    UserRef.objects.create(user_id=101, username="u101", kind="staff", department="CSE")
+    UserRef.objects.create(user_id=201, username="u201", kind="staff", department="CSE")
+    UserRef.objects.create(user_id=301, username="u301", kind="faculty", department="CSE")
     leave_type = LeaveType.objects.create(type="CL")
-    authority_route = AuthorityRoute.objects.create(
+    AuthorityRoute.objects.create(
         employee=101, leave_category="", unit_head=201, higher_authorities=[201]
     )
     principal = make_principal(
@@ -76,7 +70,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_assigned_approval_debits_once():
-    req, applicant, authority, leave_type = pending_context()
+    req, _applicant, authority, leave_type = pending_context()
     decide(req.pk, authority, "APPROVE")
     req.refresh_from_db()
     assert req.status == "APPROVED"
@@ -86,7 +80,7 @@ def test_assigned_approval_debits_once():
 
 
 def test_unassigned_authority_cannot_approve():
-    req, applicant, authority, leave_type = pending_context()
+    req, applicant, _authority, leave_type = pending_context()
     with pytest.raises(PermissionDenied):
         decide(req.pk, applicant, "APPROVE")
     req.refresh_from_db()
@@ -109,7 +103,7 @@ def test_withdraw_terminates_pending_approval():
 
 
 def test_nominee_consent_is_not_automatic():
-    req, applicant, authority, leave_type = pending_context(substitute=301)
+    req, _applicant, authority, leave_type = pending_context(substitute=301)
     assert req.substitute_status == "PENDING"
     with pytest.raises(ValidationError):
         decide(req.pk, authority, "APPROVE")
@@ -136,7 +130,7 @@ def pending_context(substitute=None):
 
 
 def test_accepted_substitute_allows_approval():
-    req, applicant, authority, leave_type = pending_context(substitute=301)
+    req, _applicant, authority, leave_type = pending_context(substitute=301)
     nominee = make_principal(
         user_id=301, kind="faculty", modules=("elm",), permissions=("elm.leave_requests.view",)
     )
@@ -150,15 +144,17 @@ def test_accepted_substitute_allows_approval():
 
 
 def test_approval_cannot_debit_twice():
-    req, applicant, authority, leave_type = pending_context()
+    req, _applicant, authority, leave_type = pending_context()
     decide(req.pk, authority, "APPROVE")
     with pytest.raises(ValidationError):
         decide(req.pk, authority, "APPROVE")
-    LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == Decimal("7")
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("7")
 
 
 def test_approval_permission_does_not_grant_unassigned_requests():
-    req, applicant, authority, leave_type = pending_context()
+    req, _applicant, _authority, leave_type = pending_context()
     other = make_principal(
         user_id=301, kind="faculty", modules=("elm",), permissions=("elm.leave_requests.approve",)
     )

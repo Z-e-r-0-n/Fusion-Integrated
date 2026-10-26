@@ -151,10 +151,7 @@ class LeaveBalanceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = LeaveBalanceSerializer
 
     def get_permissions(self):
-        if self.action == "adjust":
-            code = "elm.leave_balances.manage"
-        else:
-            code = "elm.leave_balances.view"
+        code = "elm.leave_balances.manage" if self.action == "adjust" else "elm.leave_balances.view"
         return [IsAuthenticatedPrincipal(), HasModuleGrant("elm")(), HasPermission(code)()]
 
     def get_queryset(self):
@@ -188,7 +185,7 @@ class LeaveBalanceViewSet(viewsets.ReadOnlyModelViewSet):
                 max_digits=10, decimal_places=2, min_value=0
             ).run_validation(balance_data)
         except serializers.ValidationError as e:
-            raise ValidationError(e.detail)
+            raise ValidationError(e.detail) from None
 
         delta = new_balance - row.balance
         row.balance = new_balance

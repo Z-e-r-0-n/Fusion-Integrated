@@ -13,9 +13,9 @@ pytestmark = pytest.mark.django_db
 
 
 def setup_rows():
-    user1 = UserRef.objects.create(user_id=101, username="u101", kind="staff")
-    user2 = UserRef.objects.create(user_id=201, username="u201", kind="staff")
-    user3 = UserRef.objects.create(user_id=301, username="u301", kind="faculty")
+    UserRef.objects.create(user_id=101, username="u101", kind="staff")
+    UserRef.objects.create(user_id=201, username="u201", kind="staff")
+    UserRef.objects.create(user_id=301, username="u301", kind="faculty")
     leave_type = LeaveType.objects.create(type="CL")
     AuthorityRoute.objects.create(
         employee=101, leave_category="", unit_head=201, higher_authorities=[301]
@@ -65,9 +65,7 @@ def test_locked_employee_and_account():
     leave_type = setup_rows()
     with transaction.atomic():
         assert locked_employee(101).user_id == 101
-        leave_balance = LeaveBalance.objects.create(
-            employee=101, leave_type=leave_type, year=2026, balance=8
-        )
+        LeaveBalance.objects.create(employee=101, leave_type=leave_type, year=2026, balance=8)
         assert account(101, leave_type, 2026, "staff").balance == 8
         assert resolve_route(101, "CL") == [201]
         assert resolve_route(101, "EL") == [201, 301]

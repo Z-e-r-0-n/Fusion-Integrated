@@ -17,7 +17,9 @@ def validate_request(data, employee, kind, exclude=None):
     data = {
         k: data.get(k, v)
         for k, v in zip(
-            required_keys + optional_keys, [""] * len(required_keys) + [""] * len(optional_keys)
+            required_keys + optional_keys,
+            [""] * len(required_keys) + [""] * len(optional_keys),
+            strict=True,
         )
     }
     data["half_day"] = data["half_day"] or "FULL"
@@ -58,7 +60,7 @@ def validate_request(data, employee, kind, exclude=None):
     required_nominee = leave_type.requires_substitute or (policy and policy.requires_substitute)
     if not ensure_nominee(employee, substitute, required_nominee, start, end):
         raise ValidationError("Invalid substitute")
-    balance = ensure_balance(employee, leave_type, start, kind, days, exclude)
+    ensure_balance(employee, leave_type, start, kind, days, exclude)
 
     data["employee"] = employee
     data["employee_kind"] = kind

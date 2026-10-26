@@ -1,62 +1,84 @@
-// Leave Balance Dashboard
-import { Table, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
 import { useLeaveBalances } from '../api/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useLeaveTypes } from '../api/hooks';
+import { Paper, Title, Text, Table, Alert } from '@mantine/core';
 
-export default function LeaveBalanceDashboard() {
-  const { data, isLoading, error } = useLeaveBalances();
-  const navigate = useNavigate();
+const LeaveBalanceDashboard = () => {
+  const { data: balancesData, isLoading: balancesLoading, error: balancesError } = useLeaveBalances();
+  const { data: typesData, isLoading: typesLoading, error: typesError } = useLeaveTypes();
 
-  if (isLoading) return (
-    <Paper p="md">
-      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
-        <Title order={3}>Leave Balance</Title>
-        <Text>Loading balances...</Text>
-      </LoadingOverlay>
-    </Paper>
-  );
+  if (balancesError) {
+    return (
+      <Paper>
+        <Title order={2}>Leave Balances</Title>
+        <Alert color="red" title="Error loading leave balances">
+          {balancesError.message}
+        </Alert>
+      </Paper>
+    );
+  }
 
-  if (error) return (
-    <Paper p="md">
-      <Title order={3}>Leave Balance</Title>
-      <Text color="red">{error.message}</Text>
-    </Paper>
-  );
+  if (typesError) {
+    return (
+      <Paper>
+        <Title order={2}>Leave Balances</Title>
+        <Alert color="red" title="Error loading leave types">
+          {typesError.message}
+        </Alert>
+      </Paper>
+    );
+  }
+
+  if (balancesLoading || typesLoading) {
+    return (
+      <Paper>
+        <Title order={2}>Leave Balances</Title>
+        <Text>Loading data...</Text>
+      </Paper>
+    );
+  }
+
+  if (!balancesData || !typesData || balancesData.length === 0) {
+    return (
+      <Paper>
+        <Title order={2}>Leave Balances</Title>
+        <Text>No data found.</Text>
+      </Paper>
+    );
+  }
+
+  const mappedBalances = balancesData.map((balance) => {
+    const type = typesData.find((type) => type.id === balance.leave_type);
+    return {
+      ...balance,
+      category: type ? type.type : 'Unknown',
+    };
+  });
 
   return (
-    <Paper p="md">
-      <Title order={3}>Leave Balance</Title>
+    <Paper>
+      <Title order={2}>Leave Balances</Title>
       <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Employee</Table.Th>
-            <Table.Th>Annual Balance</Table.Th>
-            <Table.Th>Used</Table.Th>
-            <Table.Th>Remaining</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map((balance: Record<string, any>) => (
-            <Table.Tr key={balance.id}>
-              <Table.Td>{balance.employee.name}</Table.Td>
-              <Table.Td>{balance.annual_balance}</Table.Td>
-              <Table.Td>{balance.used}</Table.Td>
-              <Table.Td>{balance.remaining}</Table.Td>
-              <Table.Td>
-                <Stack>
-                  <Button
-                    variant="default"
-                    onClick={() => navigate(`/elm/balances/${balance.id}`)}
-                  >
-                    View
-                  </Button>
-                </Stack>
-              </Table.Td>
-            </Table.Tr>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Category</th>
+            <th>Year</th>
+            <th>Available days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mappedBalances.map((balance) => (
+            <tr key={balance.id}>
+              <td>{balance.employee}</td>
+              <td>{balance.category}</td>
+              <td>{balance.year}</td>
+              <td>{balance.balance}</td>
+            </tr>
           ))}
-        </Table.Tbody>
+        </tbody>
       </Table>
     </Paper>
   );
-}
+};
+
+export default LeaveBalanceDashboard;

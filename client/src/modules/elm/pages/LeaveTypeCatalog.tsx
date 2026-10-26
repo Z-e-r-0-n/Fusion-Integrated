@@ -1,64 +1,67 @@
-// Leave Type Catalog
-import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
 import { useLeaveTypes } from '../api/hooks';
-import { useNavigate } from 'react-router-dom';
+import { Paper, Title, Text, Table, Alert } from '@mantine/core';
 
-export default function LeaveTypeCatalog() {
+const typeMapping: Record<string, string> = {
+  CL: 'Casual leave',
+  RH: 'Restricted holiday',
+  SCL: 'Special casual leave',
+  EL: 'Earned leave',
+  COL: 'Commuted leave',
+  VL: 'Vacation leave',
+};
+
+const LeaveTypeCatalog = () => {
   const { data, isLoading, error } = useLeaveTypes();
-  const navigate = useNavigate();
 
-  if (isLoading) return (
-    <Paper p="md">
-      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
-        <Title order={3}>Leave Types</Title>
-        <Text>Loading types...</Text>
-      </LoadingOverlay>
-    </Paper>
-  );
+  if (error) {
+    return (
+      <Paper>
+        <Alert title="Error" color="red">
+          {error.message}
+        </Alert>
+      </Paper>
+    );
+  }
 
-  if (error) return (
-    <Paper p="md">
-      <Title order={3}>Leave Types</Title>
-      <Text color="red">{error.message}</Text>
-    </Paper>
-  );
+  if (isLoading) {
+    return (
+      <Paper>
+        <Text>Loading leave types...</Text>
+      </Paper>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <Paper>
+        <Text>No leave types found.</Text>
+      </Paper>
+    );
+  }
 
   return (
-    <Paper p="md">
-      <Title order={3}>Leave Types</Title>
+    <Paper>
+      <Title order={2}>Leave categories</Title>
       <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Description</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map((type: Record<string, any>) => (
-            <Table.Tr key={type.id}>
-              <Table.Td>{type.name}</Table.Td>
-              <Table.Td>{type.description}</Table.Td>
-              <Table.Td>
-                <Badge color={type.status === 'ACTIVE' ? 'green' : 'yellow'}>
-                  {type.status}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Stack>
-                  <Button
-                    variant="default"
-                    onClick={() => navigate(`/elm/types/${type.id}`)}
-                  >
-                    View
-                  </Button>
-                </Stack>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Substitute required</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data
+            .filter((type) => ['CL', 'RH', 'SCL', 'EL', 'COL', 'VL'].includes(type.type))
+            .map((type) => (
+              <tr key={type.id}>
+                <td>{typeMapping[type.type]}</td>
+                <td>{type.requires_substitute ? 'Yes' : 'No'}</td>
+              </tr>
+            ))}
+        </tbody>
       </Table>
     </Paper>
   );
-}
+};
+
+export default LeaveTypeCatalog;

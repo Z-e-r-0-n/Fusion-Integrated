@@ -52,10 +52,6 @@ class LeaveBalance(models.Model):
         return f"{self.employee} - {self.leave_type} ({self.balance} days)"
 
 
-def current_year():
-    return timezone.localdate().year
-
-
 class LeavePolicy(models.Model):
     type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     max_days = models.PositiveIntegerField(default=0)
@@ -151,6 +147,9 @@ class AuthorityRoute(models.Model):
     class Meta:
         unique_together = ["employee", "unit", "leave_category"]
 
+    def __str__(self):
+        return f"{type(self).__name__} {self.pk}"
+
 
 class CalendarDay(models.Model):
     date = models.DateField()
@@ -163,6 +162,9 @@ class CalendarDay(models.Model):
 
     class Meta:
         unique_together = ["date", "kind"]
+
+    def __str__(self):
+        return f"{type(self).__name__} {self.pk}"
 
 
 class LeaveEvent(models.Model):
@@ -179,7 +181,13 @@ class LeaveEvent(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
+    def __str__(self):
+        return f"{type(self).__name__} {self.pk}"
+
 
 class YearEndRun(models.Model):
     year = models.PositiveIntegerField(unique=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{type(self).__name__} {self.pk}"

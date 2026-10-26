@@ -23,7 +23,7 @@ def test_anonymous_requests_are_denied():
 
 
 def test_api_submission_protects_server_fields(stub_iam):
-    leave_type, applicant = seed()
+    leave_type, _applicant = seed()
     client = api_as(stub_iam, 101, ("elm.leave_requests.view", "elm.leave_requests.apply"))
     response = client.post(
         "/api/v1/elm/requests/",
@@ -45,7 +45,7 @@ def test_api_submission_protects_server_fields(stub_iam):
 
 
 def test_api_assigned_authority_approval(stub_iam):
-    client, request_id, leave_type = created_request(stub_iam)
+    _client, request_id, leave_type = created_request(stub_iam)
     authority_client = api_as(
         stub_iam, 201, ("elm.leave_requests.view", "elm.leave_requests.approve")
     )
@@ -58,7 +58,7 @@ def test_api_assigned_authority_approval(stub_iam):
 
 
 def test_api_pending_request_cannot_be_patched(stub_iam):
-    client, request_id, leave_type = created_request(stub_iam)
+    client, request_id, _leave_type = created_request(stub_iam)
     response = client.patch(
         f"/api/v1/elm/requests/{request_id}/", data={"status": "APPROVED"}, format="json"
     )
@@ -67,7 +67,7 @@ def test_api_pending_request_cannot_be_patched(stub_iam):
 
 
 def created_request(stub_iam):
-    leave_type, applicant = seed()
+    leave_type, _applicant = seed()
     client = api_as(stub_iam, 101, ("elm.leave_requests.view", "elm.leave_requests.apply"))
     response = client.post(
         "/api/v1/elm/requests/",
@@ -90,7 +90,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_balance_employee_scope_and_write_denial(stub_iam):
-    req, applicant, authority, leave_type = pending_context()
+    _req, _applicant, _authority, leave_type = pending_context()
     other = LeaveBalance.objects.create(employee=301, leave_type=leave_type, year=2026, balance=5)
     client = api_as(stub_iam, 101, ("elm.leave_balances.view",))
 
@@ -126,7 +126,7 @@ def test_balance_employee_scope_and_write_denial(stub_iam):
 
 
 def test_balance_admin_adjustment_requires_evidence_and_audits_delta(stub_iam):
-    req, applicant, authority, leave_type = pending_context()
+    _req, _applicant, _authority, leave_type = pending_context()
     row = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
     client = api_as(stub_iam, 201, ("elm.leave_balances.view", "elm.leave_balances.manage"))
 

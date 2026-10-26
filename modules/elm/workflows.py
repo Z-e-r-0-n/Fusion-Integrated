@@ -38,7 +38,7 @@ def notify_task(req):
 def submit(data, principal):
     if principal.kind not in ["faculty", "staff"]:
         raise ValidationError("Invalid principal kind")
-    emp_dir = locked_employee(principal.user_id)
+    locked_employee(principal.user_id)
     attrs = validate_request(data, principal.user_id, principal.kind)
     req = LeaveRequest.objects.create(**attrs)
     emit(req, principal.user_id, "SUBMITTED")
@@ -52,7 +52,7 @@ def withdraw(pk, principal):
     try:
         req = LeaveRequest.objects.select_for_update().get(pk=pk)
     except LeaveRequest.DoesNotExist:
-        raise NotFound()
+        raise NotFound() from None
     if req.employee != principal.user_id:
         raise PermissionDenied()
     if req.status != "PENDING":
@@ -123,4 +123,4 @@ def get_request(pk):
         locked_employee(req.employee)
         return LeaveRequest.objects.select_for_update().get(pk=pk)
     except LeaveRequest.DoesNotExist:
-        raise NotFound("Leave request not found")
+        raise NotFound("Leave request not found") from None

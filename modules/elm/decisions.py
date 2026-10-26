@@ -12,7 +12,7 @@ def decision_request(pk, principal):
     try:
         req = LeaveRequest.objects.get(pk=pk)
     except LeaveRequest.DoesNotExist:
-        raise ValidationError("Unknown pk")
+        raise ValidationError("Unknown pk") from None
 
     if not principal.has_permission("elm.leave_requests.approve"):
         raise PermissionDenied("Permission denied")
@@ -32,9 +32,8 @@ def decision_request(pk, principal):
     if req.route[req.step] != principal.user_id:
         raise PermissionDenied("Route step mismatch")
 
-    if principal.user_id == req.employee:
-        if req.route != [req.employee]:
-            raise PermissionDenied("Route must be exactly [employee]")
+    if principal.user_id == req.employee and req.route != [req.employee]:
+        raise PermissionDenied("Route must be exactly [employee]")
 
     return req
 
@@ -71,9 +70,10 @@ def approve(req, actor, notes=""):
         return approve_cancellation(req, actor, notes)
     if req.operation not in ["LEAVE", "EXTENSION"]:
         raise ValidationError("Unsupported operation")
-    if req.operation == "EXTENSION":
-        if not req.base_request or req.base_request.status != "APPROVED":
-            raise ValidationError("Invalid base request for extension")
+    if req.operation == "EXTENSION" and (
+        not req.base_request or req.base_request.status != "APPROVED"
+    ):
+        raise ValidationError("Invalid base request for extension")
     row = ensure_balance(
         req.employee, req.leave_type, req.start_date, req.employee_kind, req.days, exclude=req.pk
     )

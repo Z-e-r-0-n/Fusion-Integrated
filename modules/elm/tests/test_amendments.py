@@ -42,7 +42,7 @@ def test_rejected_cancellation_preserves_approved_leave():
 
 
 def test_cancellation_is_unavailable_on_start_date():
-    base, applicant, authority, leave_type = approved_context()
+    base, applicant, _authority, _leave_type = approved_context()
     base.start_date = "2026-11-02"
     base.save()
     with freeze_time("2026-11-02"), pytest.raises(ValidationError):

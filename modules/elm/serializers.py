@@ -118,7 +118,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             "events",
         )
 
-    def get_events(self, obj):
+    def get_events(self, obj) -> list[dict]:
         events = obj.events.all()
         return LeaveEventSerializer(events, many=True).data
 

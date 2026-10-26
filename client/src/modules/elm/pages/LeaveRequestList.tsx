@@ -1,83 +1,223 @@
-// Leave Request List
-import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
-import { useLeaveRequests, useApproveLeave } from '../api/hooks';
-import { useNavigate } from 'react-router-dom';
+import {
+  Alert,
+  Button,
+  Group,
+  Paper,
+  Stack,
+  Table,
+  Text,
+  Textarea,
+  Title,
+} from '@mantine/core';
+import { useAuth } from '../../../auth/AuthProvider';
+import {
+  useLeaveRequests,
+  useLeaveTypes,
+  useLeaveAction,
+} from '../api/hooks';
+import LeaveApplicationForm from './LeaveApplicationForm';
+import type { LeaveRequest } from '../api/hooks'
+import { Fragment, useState } from 'react';
 
 export default function LeaveRequestList() {
-  const { data, isLoading, error } = useLeaveRequests();
-  const { mutateAsync } = useApproveLeave();
-  const navigate = useNavigate();
+  const { session, can } = useAuth();
+  const { data: leaveRequests = [], isLoading: isRequestsLoading, error: requestsError } = useLeaveRequests();
+  const { data: leaveTypes = [] } = useLeaveTypes();
+  const { mutateAsync, isPending, error } = useLeaveAction();
+  const [sharedNotes, setSharedNotes] = useState('');
+  const [showDetails, setShowDetails] = useState<Record<number, boolean>>({});
 
-  if (isLoading) return (
-    <Paper p="md">
-      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
-        <Title order={3}>Leave Requests</Title>
-        <Text>Loading requests...</Text>
-      </LoadingOverlay>
-    </Paper>
-  );
-
-  if (error) return (
-    <Paper p="md">
-      <Title order={3}>Leave Requests</Title>
-      <Text color="red">{error.message}</Text>
-    </Paper>
-  );
+  const handleAction = async (request: LeaveRequest, action: 'decide' | 'withdraw' | 'substitute-response' | 'renominate' | 'amend', payload?: Record<string, unknown>) => {
+    try {
+      await mutateAsync({ request_id: request.id, action, payload });
+    } catch {}
+  };
+  const renderTableRow = (request: LeaveRequest) => {
+    return (
+      <Fragment key={request.id}>
+        <tr>
+          <td>
+            <Stack>
+              <Text>{request.id}</Text>
+              <Text>{request.operation}</Text>
+            </Stack>
+          </td>
+          <td>{request.employee}</td>
+          <td>
+            {leaveTypes.find(t => t.id === request.leave_type)?.type || ''}
+          </td>
+          <td>
+            <Stack>
+              <Text>{request.start_date}</Text>
+              <Text>{request.end_date}</Text>
+            </Stack>
+          </td>
+          <td>{request.days}</td>
+          <td>{request.status}</td>
+          <td>{request.substitute_status}</td>
+          <td>
+            <Group>
+              <button type="button" onClick={() => setShowDetails(prev => ({ ...prev, [request.id]: !prev[request.id] }))}
+              className="Details">
+              Details
+            </button>
+            {request.status === 'PENDING' && (
+                <>
+                  {request.employee === session?.user.id && (
+                    <Button
+                      onClick={() => handleAction(request, 'withdraw')}
+                      disabled={isPending}
+                    >
+                      Withdraw
+                    </Button>
+                  )}
+                  {request.substitute_status === 'PENDING' && request.substitute === session?.user.id && (
+                    <>
+                      <Button
+                        onClick={() =>
+                          handleAction(
+                            request,
+                            'substitute-response',
+                            { accept: true },
+                          )
+                        }
+                        disabled={isPending}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          handleAction(
+                            request,
+                            'substitute-response',
+                            { accept: false },
+                          )
+                        }
+                        disabled={isPending}
+                      >
+                        Decline
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+              {request.status === 'PENDING' &&
+                can('elm.leave_requests.approve') &&
+                request.route[request.step] === session?.user.id &&
+                ['NONE', 'ACCEPTED'].includes(request.substitute_status) && (
+                  <Group>
+                    {request.route.length === request.step + 1 ? (
+                      ['APPROVE', 'REJECT'].map(decision => (
+                        <Button
+                          key={decision}
+                          onClick={() =>
+                            handleAction(
+                              request,
+                              'decide',
+                              { decision, notes: sharedNotes },
+                            )
+                          }
+                          disabled={isPending}
+                        >
+                          {decision}
+                        </Button>
+                      ))
+                    ) : (
+                      ((request.step === 0) ? ["RECOMMEND", "NOT_RECOMMEND"] : ["FORWARD"]).map(decision => (
+                        <Button
+                          key={decision}
+                          onClick={() =>
+                            handleAction(
+                              request,
+                              'decide',
+                              { decision, notes: sharedNotes },
+                            )
+                          }
+                          disabled={isPending}
+                        >
+                          {decision}
+                        </Button>
+                      ))
+                    )}
+                  </Group>
+                )}
+            </Group>
+          </td>
+        </tr>
+        {showDetails[request.id] && (
+          <tr>
+            <td colSpan={8}>
+              <Stack gap="md">
+                <Text fw={700}>Purpose:</Text>
+                <Text>{request.purpose}</Text>
+                <Text fw={700}>Route:</Text>
+                <Text>{request.route.join(', ')}</Text>
+                <Text fw={700}>Events:</Text>
+                {request.events.map(event => (
+                  <Text key={event.id}>
+                    {event.action} by {event.actor ? event.actor : 'System'} on{' '}
+                    {event.created_at}
+                  </Text>
+                ))}
+              </Stack>
+            </td>
+          </tr>
+        )}
+      </Fragment>
+    );
+  };
 
   return (
     <Paper p="md">
-      <Title order={3}>Leave Requests</Title>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>ID</Table.Th>
-            <Table.Th>Employee</Table.Th>
-            <Table.Th>Start Date</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map((request: Record<string, any>) => (
-            <Table.Tr key={request.id}>
-              <Table.Td>{request.id}</Table.Td>
-              <Table.Td>{request.employee}</Table.Td>
-              <Table.Td>{request.start_date}</Table.Td>
-              <Table.Td>
-                <Badge color={request.status === 'APPROVED' ? 'green' : 'yellow'}>
-                  {request.status}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Stack>
-                  <Button
-                    variant="default"
-                    onClick={() => navigate(`/elm/requests/${request.id}`)}
-                  >
-                    View
-                  </Button>
-                  {request.status === 'PENDING' && (
-                    <Button
-                      color="blue"
-                      onClick={() => mutateAsync({ request_id: request.id, status: 'APPROVED' })}
-                    >
-                      Approve
-                    </Button>
-                  )}
-                  {request.status === 'PENDING' && (
-                    <Button
-                      color="red"
-                      onClick={() => mutateAsync({ request_id: request.id, status: 'REJECTED' })}
-                    >
-                      Reject
-                    </Button>
-                  )}
-                </Stack>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Title order={2}>Leave Requests</Title>
+
+      {can('elm.leave_requests.apply') && (
+        <LeaveApplicationForm />
+      )}
+
+      {requestsError && (
+        <Alert title="Error" color="red">
+          {requestsError.message}
+        </Alert>
+      )}
+
+      {isRequestsLoading && (
+        <Alert title="Loading" color="blue">Loading leave requests...</Alert>
+      )}
+
+      {!isRequestsLoading && leaveRequests.length === 0 && (
+        <Alert title="No Requests" color="yellow">
+          No leave requests found. Create a new request using the form above.
+        </Alert>
+      )}
+
+      {leaveRequests.length > 0 && (
+        <Table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Employee</th>
+              <th>Type</th>
+              <th>Dates</th>
+              <th>Days</th>
+              <th>Status</th>
+              <th>Consent</th>
+<th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaveRequests.map(renderTableRow)}
+          </tbody>
+        </Table>
+      )}
+
+      {error && (
+        <Alert title="Mutation Error" color="red">
+          {error.message}
+        </Alert>
+      )}
+
+      <Textarea label="Decision notes" value={sharedNotes} onChange={(event) => setSharedNotes(event.target.value)} />
     </Paper>
   );
 }

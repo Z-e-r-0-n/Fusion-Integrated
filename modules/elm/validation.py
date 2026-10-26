@@ -13,7 +13,7 @@ def locked_employee(employee):
             user_id=employee, is_active=True, kind__in=["faculty", "staff"]
         )
     except UserRef.DoesNotExist:
-        raise ValidationError("Employee not found or not active")
+        raise ValidationError("Employee not found or not active") from None
 
 
 def account(employee, leave_type, year, kind):
@@ -72,11 +72,12 @@ def count_days(category, start, end, half="FULL"):
     dates = [start + timedelta(days=i) for i in range((end - start).days + 1)]
 
     if category in ("CL", "SCL"):
-        eligible_dates = []
-        for d in dates:
-            if d.weekday() < 5:  # Weekday (Monday=0, Friday=4)
-                if not CalendarDay.objects.filter(date=d, kind="CLOSED", published=True).exists():
-                    eligible_dates.append(d)
+        eligible_dates = [
+            d
+            for d in dates
+            if d.weekday() < 5
+            and not CalendarDay.objects.filter(date=d, kind="CLOSED", published=True).exists()
+        ]
         if half in ("FIRST", "SECOND"):
             if len(dates) != 1:
                 raise ValidationError("Half-day count requires single date")
@@ -123,7 +124,7 @@ def resolve_route(employee, category):
         try:
             route_row = AuthorityRoute.objects.get(employee=employee, leave_category="")
         except AuthorityRoute.DoesNotExist:
-            raise ValidationError("No matching authority route found")
+            raise ValidationError("No matching authority route found") from None
 
     route = []
     if route_row.director_self:
@@ -133,7 +134,7 @@ def resolve_route(employee, category):
     else:
         if not route_row.higher_authorities:
             raise ValidationError("Higher authorities required for this category")
-        route = [route_row.unit_head] + route_row.higher_authorities
+        route = [route_row.unit_head, *route_row.higher_authorities]
 
     # Validate route elements
     if not all(isinstance(x, int) and x > 0 for x in route):

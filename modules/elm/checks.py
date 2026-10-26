@@ -65,15 +65,13 @@ def ensure_nominee(employee, nominee, required, start, end):
         user_id=nominee, is_active=True, kind__in=["faculty", "staff"]
     ).exists():
         return False
-    if LeaveRequest.objects.filter(
+    return not LeaveRequest.objects.filter(
         employee=nominee,
         operation__in=["LEAVE", "EXTENSION"],
         status__in=["PENDING", "APPROVED"],
         start_date__lte=end,
         end_date__gte=start,
-    ).exists():
-        return False
-    return True
+    ).exists()
 
 
 def ensure_balance(employee, leave_type, start, kind, days, exclude=None):

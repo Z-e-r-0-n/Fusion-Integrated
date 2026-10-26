@@ -128,7 +128,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='leavetype',
             name='type',
-            field=models.CharField(choices=[('CL', 'Casual Leave'), ('RH', 'Restricted Holiday'), ('SCL', 'Special Casual Leave'), ('EL', 'Earned Leave'), ('COL', 'Caregiver Leave'), ('VL', 'Vacation Leave'), ('STATION_LEAVE', 'Station Leave')], max_length=3),
+            field=models.CharField(choices=[('CL', 'Casual Leave'), ('RH', 'Restricted Holiday'), ('SCL', 'Special Casual Leave'), ('EL', 'Earned Leave'), ('COL', 'Commuted Leave'), ('VL', 'Vacation Leave'), ('STATION_LEAVE', 'Station Leave')], max_length=13),
         ),
         migrations.CreateModel(
             name='AuthorityRoute',

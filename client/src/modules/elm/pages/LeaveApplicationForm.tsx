@@ -26,7 +26,7 @@ const LeaveApplicationForm = () => {
     medical_evidence: '',
   });
   const [submitted, setSubmitted] = useState(false);
-  
+
   const { data: leaveTypes, error: typesError } = useLeaveTypes();
   const { mutateAsync: createLeave, isPending, error } = useCreateLeave();
 
@@ -44,7 +44,7 @@ const LeaveApplicationForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(false);
-    
+
     try {
       createLeave(form)
         .then(() => setSubmitted(true))
@@ -62,10 +62,10 @@ const LeaveApplicationForm = () => {
             {typesError.message}
           </Alert>
         )}
-        
+
         <Select
           label="Leave Category"
-          data={leaveTypes?.filter(type => 
+          data={leaveTypes?.filter(type =>
             ['CL', 'RH', 'SCL', 'EL', 'COL', 'VL'].includes(type.type)
           ).map(type => ({
             label: type.type,
@@ -76,7 +76,7 @@ const LeaveApplicationForm = () => {
           required
           disabled={isPending}
         />
-        
+
         <Stack>
           <TextInput
             label="Start Date"
@@ -95,7 +95,7 @@ const LeaveApplicationForm = () => {
             required
           />
         </Stack>
-        
+
         <Textarea
           label="Purpose"
           value={form.purpose}
@@ -104,7 +104,7 @@ const LeaveApplicationForm = () => {
           required
           minRows={3}
         />
-        
+
         {leaveTypes.find(i => i.id === form.leave_type)?.type === 'CL' && (
           <Select
             label="Half Day"
@@ -113,7 +113,7 @@ const LeaveApplicationForm = () => {
             onChange={(value) => handleSelectChange('half_day', value)}
           />
         )}
-        
+
         <NumberInput
           label="Substitute employee ID"
           value={form.substitute ?? ''}
@@ -121,14 +121,14 @@ const LeaveApplicationForm = () => {
           name="substitute"
           placeholder="Leave empty if none"
         />
-        
+
         <Checkbox
           label="Station Leave"
           checked={form.station_leave}
           onChange={(e) => setForm(prev => ({ ...prev, station_leave: e.target.checked }))}
           name="station_leave"
         />
-        
+
         {form.station_leave && (
           <Textarea
             label="Station Details"
@@ -139,7 +139,7 @@ const LeaveApplicationForm = () => {
             minRows={3}
           />
         )}
-        
+
         <TextInput
           label="Medical Evidence Reference"
           value={form.medical_evidence}
@@ -147,21 +147,21 @@ const LeaveApplicationForm = () => {
           name="medical_evidence"
           placeholder="Optional"
         />
-        
+
         {error && (
           <Alert color="red" title="Error submitting request">
             {error.message}
           </Alert>
         )}
-        
+
         {submitted && (
           <Alert color="green" title="Request Submitted">
             Request submitted for review. Balance changes only after final approval.
           </Alert>
         )}
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           loading={isPending}
           disabled={!form.leave_type || isPending}
         >

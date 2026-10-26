@@ -1,70 +1,72 @@
-// Leave Policy Editor
-import { Table, Badge, Paper, Stack, Title, Button, LoadingOverlay, Text } from '@mantine/core';
 import { useLeavePolicies } from '../api/hooks';
-import { useNavigate } from 'react-router-dom';
+import { useLeaveTypes } from '../api/hooks';
+import { Paper, Title, Text, Table, Alert } from '@mantine/core';
 
-export default function LeavePolicyEditor() {
-  const { data, isLoading, error } = useLeavePolicies();
-  const navigate = useNavigate();
+const LeavePolicyEditor = () => {
+  const { data: leavePolicies, isLoading, error } = useLeavePolicies();
+  const { data: leaveTypes } = useLeaveTypes();
 
-  if (isLoading) return (
-    <Paper p="md">
-      <LoadingOverlay visible={true} overlayProps={{ opacity: 0.1 }}>
-        <Title order={3}>Leave Policies</Title>
-        <Text>Loading policies...</Text>
-      </LoadingOverlay>
-    </Paper>
-  );
+  if (error) {
+    return (
+      <Paper>
+        <Alert title="Error" color="red">
+          {error.message}
+        </Alert>
+      </Paper>
+    );
+  }
 
-  if (error) return (
-    <Paper p="md">
-      <Title order={3}>Leave Policies</Title>
-      <Text color="red">{error.message}</Text>
-    </Paper>
-  );
+  if (isLoading) {
+    return <Paper> Loading leave policies...</Paper>;
+  }
+
+  if (!leavePolicies || leavePolicies.length === 0) {
+    return (
+      <Paper>
+        <Title order={3}>Leave policies</Title>
+        <Text>No leave policies found.</Text>
+      </Paper>
+    );
+  }
 
   return (
-    <Paper p="md">
-      <Title order={3}>Leave Policies</Title>
+    <Paper>
+      <Title order={3}>Leave policies</Title>
       <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>Description</Table.Th>
-            <Table.Th>Status</Table.Th>
-            <Table.Th>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {data.map((policy: Record<string, any>) => (
-            <Table.Tr key={policy.id}>
-              <Table.Td>{policy.name}</Table.Td>
-              <Table.Td>{policy.description}</Table.Td>
-              <Table.Td>
-                <Badge color={policy.status === 'ACTIVE' ? 'green' : 'yellow'}>
-                  {policy.status}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Stack>
-                  <Button
-                    variant="default"
-                    onClick={() => navigate(`/elm/policies/${policy.id}`)}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    color="blue"
-                    onClick={() => navigate(`/elm/policies/${policy.id}/edit`)}
-                  >
-                    Edit
-                  </Button>
-                </Stack>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Applies to</th>
+            <th>Maximum days</th>
+            <th>Substitute required</th>
+            <th>Medical evidence</th>
+            <th>Reminder hours</th>
+            <th>Escalation hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leavePolicies.map((policy) => {
+            const leaveType = leaveTypes?.find(
+              (type) => type.id === policy.type
+            );
+            return (
+              <tr key={policy.id}>
+                <td>{leaveType?.type || 'Unknown'}</td>
+                <td>{policy.applicable_kind || 'All employees'}</td>
+                <td>{policy.max_days || 'No configured limit'}</td>
+                <td>{policy.requires_substitute ? 'Yes' : 'No'}</td>
+                <td>
+                  {policy.medical_evidence_required ? 'Yes' : 'No'}
+                </td>
+                <td>{policy.reminder_hours}</td>
+                <td>{policy.escalation_hours}</td>
+              </tr>
+            );
+          })}
+        </tbody>
       </Table>
     </Paper>
   );
-}
+};
+
+export default LeavePolicyEditor;
