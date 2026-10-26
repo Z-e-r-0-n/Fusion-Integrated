@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from modules.elm.application import validate_request
-from modules.elm.models import LeaveBalance, LeaveRequest
+from modules.elm.models import LeaveRequest
 from modules.elm.validation import account, count_days, resolve_route
 from modules.elm.workflows import emit, get_request, notify_task
 
@@ -90,6 +90,8 @@ def approved_end(base):
 @transaction.atomic
 def extension_request(pk, principal, end_date, data=None):
     base = amendment_base(pk, principal)
+    if base.actual_return_date is not None:
+        raise ValidationError("Leave has already resumed")
     if base.leave_type.type not in ["EL", "COL", "VL"]:
         raise ValidationError("Only EL, COL, VL may extend")
     approved_end_date = approved_end(base)
@@ -172,15 +174,21 @@ def approve_resumption(req, actor, notes=""):
         ),
         Decimal("0"),
     )
+    from modules.elm.checks import ensure_overlap_free
+
+    if req.actual_return_date > approved_end(base):
+        ensure_overlap_free(
+            base.employee,
+            base.leave_type,
+            approved_end(base) + timedelta(days=1),
+            req.actual_return_date,
+            "FULL",
+            exclude=base.pk,
+        )
     actual = count_days(base.leave_type.type, base.start_date, req.actual_return_date, "FULL")
     delta = charged - actual
 
-    row = LeaveBalance.objects.get(
-        employee=base.employee,
-        leave_type=base.leave_type,
-        year=base.start_date.year,
-        employee_kind=base.employee_kind,
-    )
+    row = account(base.employee, base.leave_type, base.start_date.year, base.employee_kind)
     if row.balance + delta < 0:
         raise ValidationError("Insufficient balance for resumption")
     row.balance += delta

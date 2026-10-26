@@ -165,3 +165,20 @@ def test_balance_admin_adjustment_requires_evidence_and_audits_delta(stub_iam):
 
     row.refresh_from_db()
     assert row.balance == Decimal("6")
+
+
+def test_balance_adjustment_accepts_numeric_zero(stub_iam):
+    _req, _applicant, _authority, leave_type = pending_context()
+    row = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
+    client = api_as(stub_iam, 201, ("elm.leave_balances.manage",))
+    response = client.post(
+        f"/api/v1/elm/balances/{row.pk}/adjust/",
+        {"balance": 0, "reason": "Reconciled record", "evidence": "ORDER-ZERO"},
+        format="json",
+    )
+    assert response.status_code == 200
+    row.refresh_from_db()
+    assert row.balance == Decimal("0")
+    assert LeaveEvent.objects.filter(
+        employee=101, action="BALANCE_CORRECTED", delta=Decimal("-8")
+    ).exists()

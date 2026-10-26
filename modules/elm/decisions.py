@@ -17,11 +17,11 @@ def decision_request(pk, principal):
     if not principal.has_permission("elm.leave_requests.approve"):
         raise PermissionDenied("Permission denied")
 
-    if req.substitute_status not in ["NONE", "ACCEPTED"]:
-        raise ValidationError("Invalid substitute status")
-
     locked_employee(req.employee)
     req = LeaveRequest.objects.select_for_update().get(pk=pk)
+
+    if req.substitute_status not in ["NONE", "ACCEPTED"]:
+        raise ValidationError("Invalid substitute status")
 
     if req.status != "PENDING":
         raise ValidationError("Status must be PENDING")

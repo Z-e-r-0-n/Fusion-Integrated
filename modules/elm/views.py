@@ -42,7 +42,14 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     serializer_class = LeaveRequestSerializer
 
     def get_permissions(self):
-        if self.action in ["create", "withdraw", "renominate", "amend"]:
+        if self.action == "offline_sync":
+            permission_classes = [
+                IsAuthenticatedPrincipal,
+                HasModuleGrant("elm"),
+                HasPermission("elm.leave_records.manage"),
+            ]
+        elif self.action in ["create", "withdraw", "renominate", "amend"]:
+            # existing body remains
             permission_classes = [
                 IsAuthenticatedPrincipal,
                 HasModuleGrant("elm"),
@@ -66,6 +73,19 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         req = submit(serializer.validated_data, request.principal)
+        return Response(self.get_serializer(req).data, status=201)
+
+    @action(detail=False, methods=["post"], url_path="offline-sync")
+    def offline_sync(self, request):
+        from modules.elm.offline import OfflineMetadataSerializer, synchronize
+
+        meta = OfflineMetadataSerializer(data=request.data)
+        meta.is_valid(raise_exception=True)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = dict(meta.validated_data)
+        employee = values.pop("employee")
+        req = synchronize(serializer.validated_data, employee, request.principal, **values)
         return Response(self.get_serializer(req).data, status=201)
 
     def perform_create(self, serializer):
@@ -174,10 +194,13 @@ class LeaveBalanceViewSet(viewsets.ReadOnlyModelViewSet):
             raise ValidationError("Reason and evidence are required")
 
         locked_employee(obj.employee)
+        from modules.elm.validation import ensure_open_year
+
+        ensure_open_year(obj.employee, obj.year)
         row = LeaveBalance.objects.select_for_update().get(pk=obj.pk)
 
         balance_data = request.data.get("balance")
-        if not balance_data:
+        if balance_data is None:
             raise ValidationError("Balance is required")
 
         try:

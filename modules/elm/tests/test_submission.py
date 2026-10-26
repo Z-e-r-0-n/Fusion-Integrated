@@ -161,3 +161,14 @@ def test_approval_permission_does_not_grant_unassigned_requests():
     with pytest.raises(PermissionDenied):
         decide(req.pk, other, "APPROVE")
     assert LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026).balance == 8
+
+
+def test_withdraw_with_nominee_notifies_all_without_debit():
+    req, applicant, _authority, leave_type = pending_context(substitute=301)
+    withdraw(req.pk, applicant)
+    req.refresh_from_db()
+    assert req.status == "WITHDRAWN"
+    withdrawn_event = req.events.get(action="WITHDRAWN")
+    assert withdrawn_event.details["recipients"] == [101, 201, 301]
+    leave_balance = LeaveBalance.objects.get(employee=101, leave_type=leave_type, year=2026)
+    assert leave_balance.balance == Decimal("8")

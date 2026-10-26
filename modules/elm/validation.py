@@ -4,7 +4,7 @@ from decimal import Decimal
 from rest_framework.exceptions import ValidationError
 
 from modules.directory.models import UserRef
-from modules.elm.models import AuthorityRoute, CalendarDay, LeaveBalance
+from modules.elm.models import AuthorityRoute, CalendarDay, LeaveBalance, LeaveEvent
 
 
 def locked_employee(employee):
@@ -17,6 +17,7 @@ def locked_employee(employee):
 
 
 def account(employee, leave_type, year, kind):
+    ensure_open_year(employee, year)
     allowed_types = ["CL", "RH", "SCL", "COL", "EL", "VL"]
     if leave_type.type not in allowed_types:
         raise ValidationError("Invalid leave type")
@@ -153,3 +154,10 @@ def resolve_route(employee, category):
         raise ValidationError("Incomplete UserRef matching route")
 
     return route
+
+
+def ensure_open_year(employee, year):
+    if LeaveEvent.objects.filter(
+        employee=employee, action="YEAR_END_ROLLED_OVER", details__year=year
+    ).exists():
+        raise ValidationError("Closed leave year requires reconciliation")

@@ -66,7 +66,7 @@ def withdraw(pk, principal):
         delta=Decimal("0"),
         recipients=[req.employee]
         + req.route
-        + (req.substitute if req.substitute is not None else []),
+        + ([req.substitute] if req.substitute is not None else []),
     )
     return req
 

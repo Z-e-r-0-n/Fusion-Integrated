@@ -621,6 +621,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/LeaveRequest'
           description: ''
+  /api/v1/elm/requests/offline-sync/:
+    post:
+      operationId: v1_elm_requests_offline_sync_create
+      description: API endpoint for managing leave requests.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LeaveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LeaveRequest'
+        required: true
+      security:
+      - iamSession: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+          description: ''
   /api/v1/elm/routes/:
     get:
       operationId: v1_elm_routes_list

@@ -96,3 +96,34 @@ def test_resumption_review_adjusts_only_after_review(actual_day, expected):
 
         with pytest.raises(ValidationError):
             resumption_request(base.pk, applicant, date(2026, 11, actual_day), "Returned to duty")
+
+
+def test_reviewed_resumption_prevents_new_extension():
+    base, applicant, _head, final, _leave_type = approved_el_context()
+    with freeze_time("2026-11-03"):
+        child = resumption_request(base.pk, applicant, date(2026, 11, 3), "Returned early")
+        decide(child.pk, final, "APPROVE")
+        with pytest.raises(ValidationError):
+            extension_request(base.pk, applicant, date(2026, 11, 6))
+
+
+def test_late_resumption_cannot_overlap_another_request():
+    base, applicant, _head, final, leave_type = approved_el_context()
+    submit(
+        {
+            "leave_type": leave_type,
+            "start_date": date(2026, 11, 5),
+            "end_date": date(2026, 11, 6),
+            "purpose": "Other leave",
+        },
+        applicant,
+    )
+    with freeze_time("2026-11-08"):
+        child = resumption_request(base.pk, applicant, date(2026, 11, 6), "Returned late")
+        with pytest.raises(ValidationError):
+            decide(child.pk, final, "APPROVE")
+    base.refresh_from_db()
+    assert base.actual_return_date is None
+    assert LeaveBalance.objects.get(
+        employee=101, leave_type=leave_type, year=2026
+    ).balance == Decimal("27")
